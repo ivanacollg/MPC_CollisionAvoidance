@@ -1,6 +1,6 @@
 # MPC_CollisionAvoidance
 
-## Depends
+## Dependencies
 
 ### [Python 3.7](https://medium.com/analytics-vidhya/how-to-install-and-switch-between-different-python-versions-in-ubuntu-16-04-dc1726796b9b)
 ```
@@ -17,6 +17,7 @@ pip3.7 install matplotlib
 pip3.7 install scipy
 pip3.7 install future-fstrings
 pip3.7 install casadi>=3.5.1
+pip3.7 install setuptools
 sudo apt-get install python3.7-tk
 
 ```
@@ -24,15 +25,17 @@ sudo apt-get install python3.7-tk
 ## To Use:
 ```
   git clone https://github.com/ivanacollg/MPC_CollisionAvoidance.git
+  cd MPC_CollisionAvoidance
   git submodule update --recursive --init
-  cd MPC_CollisionAvoidance/catkin_ws/src/nmpc_ca/acados/
-  git submodule update --recursive --init
+  cd catkin_ws/src/nmpc_ca/acados/
   mkdir -p build
   cd build
   cmake -DACADOS_WITH_QPOASES=ON -DACADOS_WITH_OSQP=OFF/ON -DACADOS_INSTALL_DIR=<path_to_acados_installation_folder> ..
   make install 
   cd ../interfaces/acados_template/
   pip3.7 install -e .
+  cd ../../../../..
+  catkin_make
 ```
 Add the path to the compiled shared libraries libacados.so, libblasfeo.so, libhpipm.so to LD_LIBRARY_PATH (default path is <acados_root/lib>) by running:
 ```
