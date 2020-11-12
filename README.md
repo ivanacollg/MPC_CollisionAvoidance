@@ -25,7 +25,7 @@ sudo apt-get install python3.7-tk
 ```
   git clone 
   git submodule update --recursive --init
-  cd acados 
+  cd MPC_CollisionAvoidance/catkin_ws/src/nmpc_ca/acados/
   git submodule update --recursive --init
   mkdir -p build
   cd build
