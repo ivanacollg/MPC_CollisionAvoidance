@@ -23,7 +23,7 @@ sudo apt-get install python3.7-tk
 
 ## To Use:
 ```
-  git clone 
+  git clone https://github.com/ivanacollg/MPC_CollisionAvoidance.git
   git submodule update --recursive --init
   cd MPC_CollisionAvoidance/catkin_ws/src/nmpc_ca/acados/
   git submodule update --recursive --init
