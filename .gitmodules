@@ -1,0 +1,3 @@
+[submodule "catkin_ws/src/nmpc_ca/acados"]
+	path = catkin_ws/src/nmpc_ca/acados
+	url = git@github.com:acados/acados.git
