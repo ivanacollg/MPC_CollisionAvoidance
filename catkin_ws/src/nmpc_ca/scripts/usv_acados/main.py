@@ -36,7 +36,7 @@
 import time, os
 import numpy as np
 from acados_settings import *
-#from plotFcn import *
+from plotFcn import *
 #from tracks.readDataFcn import getTrack
 import matplotlib.pyplot as plt
 
@@ -120,13 +120,13 @@ for i in range(Nsim):
         break
     '''
 
-'''
+
 # Plot Results
 t = np.linspace(0.0, Nsim * Tf / N, Nsim)
 plotRes(simX, simU, t)
-plotTrackProj(simX, track)
-plotalat(simX, simU, constraint, t)
-'''
+#plotTrackProj(simX, track)
+#plotalat(simX, simU, constraint, t)
+
 # Print some stats
 print("Average computation time: {}".format(tcomp_sum / Nsim))
 print("Maximum computation time: {}".format(tcomp_max))
