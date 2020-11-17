@@ -50,7 +50,7 @@ The simulation starts at s=-2m until one round is completed(s=8.71m). The beginn
 #[Sref, _, _, _, _] = getTrack(track)
 
 Tf = 1.0  # prediction horizon
-N = 50  # number of discretization steps
+N = 100  # number of discretization steps
 T = 10.00  # maximum simulation time[s]
 #sref_N = 3  # reference for final reference progress
 

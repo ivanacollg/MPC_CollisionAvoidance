@@ -151,7 +151,7 @@ def usv_model():
     #constraint.along_max = 4  # maximum lateral force [m/s^2]
 
     # Define initial conditions
-    model.x0 = np.array([0, 0, 0, 0, 0])
+    model.x0 = np.array([0.001, 0, 0, 0, 0])
 
     # define constraints struct
     #constraint.alat = Function("a_lat", [x, u], [a_lat])

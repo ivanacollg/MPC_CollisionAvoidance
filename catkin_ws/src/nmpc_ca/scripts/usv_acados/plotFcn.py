@@ -100,7 +100,7 @@ def plotTrackProj(simX, T_opt=None):
 def plotRes(simX,simU,t):
     # plot results
     plt.figure()
-    plt.subplot(2, 1, 1)
+    plt.subplot(3, 1, 1)
     plt.step(t, simU[:,0], color='r')
     plt.step(t, simU[:,1], color='g')
     plt.title('closed-loop simulation')
@@ -108,11 +108,17 @@ def plotRes(simX,simU,t):
     plt.ylabel('u')
     plt.xlabel('t')
     plt.grid(True)
-    plt.subplot(2, 1, 2)
-    plt.plot(t, simX[:,:])
+    plt.subplot(3, 1, 2)
+    plt.plot(t, simX[:,:3])
     plt.ylabel('x')
     plt.xlabel('t')
-    plt.legend(['u','v','r','Tport','Tstbd'])
+    plt.legend(['u','v','r'])
+    plt.grid(True)
+    plt.subplot(3, 1, 3)
+    plt.plot(t, simX[:,3:5])
+    plt.ylabel('x')
+    plt.xlabel('t')
+    plt.legend(['Tport','Tstbd'])
     plt.grid(True)
 '''
 def plotalat(simX,simU,constraint,t):
