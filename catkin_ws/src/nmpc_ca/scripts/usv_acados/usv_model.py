@@ -63,8 +63,6 @@ def usv_model():
     Y_r_dot = -1.31
     N_v_dot = -16.41
     N_r_dot = -2.79
-    Xu = -25
-    Xuu = 0
     Yvv = -99.99
     Yvr = -5.49
     Yrv = -5.49
@@ -109,6 +107,8 @@ def usv_model():
     # dynamics
     #Fxd = (Cm1 - Cm2 * v) * D - Cr2 * v * v - Cr0 * tanh(5 * v)
     #sdota = (v * cos(alpha + C1 * delta)) / (1 - kapparef_s(s) * n)
+    Xu = if_else(u > 1.25, 64.55, -25)
+    Xuu = if_else(u > 1.25, -70.92, 0)
     Yv = 0.5*(-40*1000*fabs(v))*(1.1+0.0045*(1.01/0.09)-0.1*(0.27/0.09)+0.016*((0.27/0.09)*(0.27/0.09)))
     Nr = (-0.52)*sqrt(u*u + v*v)
     Tu = Tport + c * Tstbd
@@ -126,8 +126,8 @@ def usv_model():
     #a_long = Fxd / m
 
     # Model bounds
-    model.u_min = -1.2
-    model.u_max = 1.2
+    model.u_min = -1.5
+    model.u_max = 1.5
 
     # state bounds
     model.Tport_min = -30
@@ -165,8 +165,8 @@ def usv_model():
     params.Y_r_dot = Y_r_dot
     params.N_v_dot = N_v_dot
     params.N_r_dot = N_r_dot
-    params.Xu = Xu
-    params.Xuu = Xuu
+    #params.Xu = Xu
+    #params.Xuu = Xuu
     params.Yvv = Yvv
     params.Yvr = Yvr
     params.Yrv = Yrv

@@ -73,7 +73,7 @@ tcomp_max = 0
 # simulate
 for i in range(Nsim):
     # update reference
-    uref = 1 #u0 + #sref_N
+    uref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (uref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
         yref=np.array([uref,0,0,0,0,0,0])
