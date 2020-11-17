@@ -72,13 +72,13 @@ def acados_settings(Tf, N):
     nsh = 2
 
     # set cost
-    Q = np.diag([ 1e-1, 1e-8, 1e-8, 1e-8, 1e-3])
+    Q = np.diag([ 1e0, 0, 1e0, 0, 0])
 
     R = np.eye(nu)
-    R[0, 0] = 1e-3
-    R[1, 1] = 5e-3
+    R[0, 0] = 0
+    R[1, 1] = 0
 
-    Qe = np.diag([ 5e0, 1e1, 1e-8, 1e-8, 5e-3])
+    Qe = np.diag([ 5e0, 0, 5e0, 0, 0])
 
     ocp.cost.cost_type = "LINEAR_LS"
     ocp.cost.cost_type_e = "LINEAR_LS"
@@ -92,8 +92,8 @@ def acados_settings(Tf, N):
     ocp.cost.Vx = Vx
 
     Vu = np.zeros((ny, nu))
-    Vu[5, 0] = 1.0
-    Vu[6, 1] = 1.0
+    #Vu[5, 0] = 1.0
+    #Vu[6, 1] = 1.0
     ocp.cost.Vu = Vu
 
     Vx_e = np.zeros((ny_e, nx))
