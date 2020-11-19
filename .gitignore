@@ -38,7 +38,7 @@
 *build_isolated
 *devel_isolated
 
-*c_generated_code
+c_generated_code
 *.pyc
 *.c
 *.json
