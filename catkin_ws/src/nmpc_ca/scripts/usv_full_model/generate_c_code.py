@@ -34,10 +34,26 @@ from os.path import dirname, join, abspath
 ACADOS_PATH = join(dirname(abspath(__file__)), "../../acados")
 
 # create render arguments
-ra = acados_ocp_nlp()
+#ra = acados_ocp_nlp()
+ra = AcadosOcp()
 
 # export model
-model = export_ode_model()
+model, constraint = export_ode_model()
+
+# define acados ODE
+model_ac = AcadosModel()
+model_ac.f_impl_expr = model.f_impl_expr
+model_ac.f_expl_expr = model.f_expl_expr
+model_ac.x = model.x
+model_ac.xdot = model.xdot
+model_ac.u = model.u
+model_ac.z = model.z
+model_ac.p = model.p
+model_ac.name = model.name
+ra.model = model_ac
+
+# define constraint
+model_ac.con_h_expr = constraint.expr
 
 Tf = 1.0
 N = 100
@@ -56,6 +72,8 @@ nlp_dims.nbu = nu
 nlp_dims.nbx_e = 0
 nlp_dims.nu  = model.u.size()[0]
 nlp_dims.N   = N
+ns = 2
+nsh = 2
 
 # parameters
 #g0  = 9.8066    # [m.s^2] accerelation of gravity
@@ -63,8 +81,8 @@ nlp_dims.N   = N
 #Ct  = 3.25e-4   # [N/krpm^2] Thrust coef
 
 # bounds
-hov_w = np.sqrt((mq*g0)/(4*Ct))
-max_thrust = 22
+#hov_w = np.sqrt((mq*g0)/(4*Ct))
+#max_thrust = 22
 
 # set weighting matrices
 nlp_cost = ra.cost
@@ -109,14 +127,14 @@ nlp_cost.Vx_e = Vx_e
 nlp_cost.yref   = np.array([1, 0, 0, 0, 0, 0, 0])
 nlp_cost.yref_e = np.array([0, 0, 0, 0, 0])
 
-nlp_con = ra.constraints
+#nlp_con = ra.constraints
 
 '''
 nlp_con.lbu = np.array([0,0,0,0])
 nlp_con.ubu = np.array([+max_thrust,+max_thrust,+max_thrust,+max_thrust])
 nlp_con.x0  = np.array([0,0,0,1,0,0,0,0,0,0,0,0,0])
 nlp_con.idxbu = np.array([0, 1, 2, 3])
-'''
+
 # setting constraints
 nlp_con.lbx = np.array([model.u_min])
 nlp_con.ubx = np.array([model.u_max])
@@ -124,7 +142,39 @@ nlp_con.idxbx = np.array([0])
 nlp_con.lbu = np.array([model.Tportdot_min, model.Tstbddot_min])
 nlp_con.ubu = np.array([model.Tportdot_max, model.Tstbddot_max])
 nlp_con.idxbu = np.array([0, 1])
-nlp_con.x0  = np.array([0,0,0,0,0])
+nlp_con.x0  = np.array([0,0,0,0,0])'''
+# setting constraints
+ra.constraints.lbx = np.array([model.u_min])
+ra.constraints.ubx = np.array([model.u_max])
+ra.constraints.idxbx = np.array([0])
+ra.constraints.lbu = np.array([model.Tportdot_min, model.Tstbddot_min])
+ra.constraints.ubu = np.array([model.Tportdot_max, model.Tstbddot_max])
+ra.constraints.idxbu = np.array([0, 1])
+# ra.constraints.lsbx=np.zero s([1])
+# ra.constraints.usbx=np.zeros([1])
+# ra.constraints.idxsbx=np.array([1])
+ra.constraints.lh = np.array(
+    [
+        #constraint.along_min,
+        #constraint.alat_min,
+        model.u_min,
+        model.Tport_min,
+        model.Tstbd_min,
+    ]
+)
+ra.constraints.uh = np.array(
+    [
+        #constraint.along_max,
+        #constraint.alat_max,
+        model.u_max,
+        model.Tport_max,
+        model.Tstbd_max,
+    ]
+)
+ra.constraints.lsh = np.zeros(nsh)
+ra.constraints.ush = np.zeros(nsh)
+ra.constraints.idxsh = np.array([0, 2])
+
 
 ## set QP solver
 #ra.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'
@@ -141,8 +191,9 @@ ra.solver_options.nlp_solver_type = 'SQP_RTI'
 ra.acados_include_path  = f'{ACADOS_PATH}/include'
 ra.acados_lib_path      = f'{ACADOS_PATH}/lib'
 
-ra.model = model
+#ra.model = model
 
-acados_solver = generate_solver(ra, json_file = 'acados_ocp.json')
+#acados_solver = generate_solver(ra, json_file = 'acados_ocp.json')
+acados_solver = AcadosOcpSolver(ra, json_file="acados_ocp.json")
 
 print('>> NMPC exported')

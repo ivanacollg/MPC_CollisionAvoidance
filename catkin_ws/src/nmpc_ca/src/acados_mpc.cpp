@@ -28,24 +28,27 @@
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
 
+
 // msgs
-#include <std_msgs/String.h>
+//#include <std_msgs/String.h>
+#include <std_msgs/UInt8.h>
+#include <std_msgs/Float64.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
-// crazyflie
+/*// crazyflie
 #include <crazyflie_controller/CrazyflieState.h>
 #include <crazyflie_controller/PropellerSpeeds.h>
 #include <crazyflie_controller/CrazyflieStateStamped.h>
 #include <crazyflie_controller/PropellerSpeedsStamped.h>
 #include <crazyflie_controller/CrazyflieOpenloopTraj.h>
-#include <crazyflie_controller/GenericLogData.h>
+#include <crazyflie_controller/GenericLogData.h>*/
 
 // Dynamic reconfirgure
-#include <dynamic_reconfigure/server.h>
-#include <boost/thread.hpp>
-#include "boost/thread/mutex.hpp"
+//#include <dynamic_reconfigure/server.h>
+//#include <boost/thread.hpp>
+//#include "boost/thread/mutex.hpp"
 // crazyflie
-#include <crazyflie_controller/crazyflie_paramsConfig.h>
+//#include <crazyflie_controller/crazyflie_paramsConfig.h>
 
 // Matrices and vectors
 #include <eigen3/Eigen/Dense>
@@ -68,9 +71,9 @@
 #include "blasfeo/include/blasfeo_d_aux.h"
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
-// crazyflie specific
-#include "crazyflie_model/crazyflie_model.h"
-#include "acados_solver_crazyflie.h"
+// usv specific
+#include "usv_model_model/usv_model_model.h"
+#include "acados_solver_usv_model.h"
 
 // global data
 ocp_nlp_in * nlp_in;
@@ -95,16 +98,16 @@ using std::showpos;
 // Number of intervals in the horizon
 #define N 100
 // Number of differential state variables
-#define NX 13
+#define NX 5
 // Number of control inputs
-#define NU 4
+#define NU 2
 // Number of measurements/references on nodes 0..N-1
-#define NY 17
+#define NY 7
 // Number of measurements/references on node N
-#define NYN 13
+#define NYN 5
 // Constants
-#define pi  3.14159265358979323846
-#define g0 9.80665
+//#define pi  3.14159265358979323846
+//#define g0 9.80665
 
 #define WEIGHT_MATRICES 0
 #define SET_WEIGHTS 0
@@ -115,47 +118,37 @@ using std::showpos;
 class NMPC
 	{
 	enum systemStates{
-		xq = 0,
-		yq = 1,
-		zq = 2,
-		qw = 3,
-		qx = 4,
-		qy = 5,
-		qz = 6,
-		vbx = 7,
-		vby = 8,
-		vbz = 9,
-		wx = 10,
-		wy = 11,
-		wz = 12
+		u = 0,
+		v = 1,
+		r = 2,
+		Tport = 3,
+	  Tstbd = 4
 	};
 
 	enum controlInputs{
-		w1 = 0,
-		w2 = 1,
-		w3 = 2,
-		w4 = 3
+		UTportdot = 0,
+		UTstbddot = 1,
 	};
 
-	enum reference_mode{
+	/*enum reference_mode{
 		Regulation = 0,
 		Tracking = 1,
 		Position_Hold = 2
-	};
+	};*/
 
-	struct euler{
+	/*struct euler{
 		double phi;
 		double theta;
 		double psi;
-	};
+	};*/
 
 	struct solver_output{
 		double status, KKT_res, cpu_time;
 		double u0[NU];
-		double u1[NU];
+		//double u1[NU];
 		double x1[NX];
-		double x2[NX];
-		double x4[NX];
+		//double x2[NX];
+		//double x4[NX];
 		double xi[NU];
 		double ui[NU];
 	};
@@ -168,39 +161,47 @@ class NMPC
 		double WN[NX*NX];
 	};
 
-	ros::Publisher p_motvel;
-	ros::Publisher p_bodytwist;
+	//ros::Publisher p_motvel;
+	//ros::Publisher p_bodytwist;
 	// trajectory
-	ros::Publisher p_ol_traj;
+	//ros::Publisher p_ol_traj;
 
-	ros::Subscriber s_estimator;
+	//ros::Subscriber s_estimator;
 
-	ros::Subscriber s_imu_sub;
-	ros::Subscriber s_eRaptor_sub;
-	ros::Subscriber s_euler_sub;
-	ros::Subscriber s_motors;
+	//ros::Subscriber s_imu_sub;
+	//ros::Subscriber s_eRaptor_sub;
+	//ros::Subscriber s_euler_sub;
+	//ros::Subscriber s_motors;
+
+
+  ros::Publisher right_thruster_pub;
+  ros::Publisher left_thruster_pub;
+
+  //ros::Subscriber ins_pose_sub;
+  ros::Subscriber local_vel_sub;
 
 	// Variables for joy callback
-	double joy_roll,joy_pitch,joy_yaw;
-	double joy_thrust;
+	/*double joy_roll,joy_pitch,joy_yaw;
+	double joy_thrust;*/
 
 	unsigned int k,i,j,ii;
 
-	float uss,Ct,mq;
+	//float uss,Ct,mq;
 
 	// Variables of the nmpc control process
 	double x0_sign[NX];
 	double yref_sign[(NY*N)+NY];
 
 	// Variables for dynamic reconfigure
-	double xq_des, yq_des, zq_des;
+	double u_des, v_des, r_des;
+  double u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
+  std_msgs::Float64 right_thruster;
+  std_msgs::Float64 left_thruster;
 
 	// Variables for dynamic reconfigure
-	double Wdiag_xq,Wdiag_yq,Wdiag_zq;
-	double Wdiag_qw,Wdiag_qx,Wdiag_qy,Wdiag_qz;
-	double Wdiag_vbx,Wdiag_vby,Wdiag_vbz;
-	double Wdiag_wx,Wdiag_wy,Wdiag_wz;
-	double Wdiag_w1,Wdiag_w2,Wdiag_w3,Wdiag_w4;
+	double Wdiag_u,Wdiag_v,Wdiag_r;
+	double Wdiag_Tport,Wdiag_Tstbd;
+	double Wdiag_UTportdot,Wdiag_UTstbddot;
 	double WN_factor;
 
 	// acados struct
@@ -208,19 +209,19 @@ class NMPC
 	solver_output acados_out;
 	int acados_status;
 
-	reference_mode policy;
+	//reference_mode policy;
 
 	// Variable for storing the optimal trajectory
-	std::vector<std::vector<double> > precomputed_traj;
-	int N_STEPS,iter;
+	/*std::vector<std::vector<double> > precomputed_traj;
+	int N_STEPS,iter;*/
 
 public:
 
-	NMPC(ros::NodeHandle& n, const std::string& ref_traj)
+	NMPC(ros::NodeHandle& n)
 		{
 
 		int status = 0;
-		double WN_factor = 50;
+		double WN_factor = 5;
 
 		status = acados_create();
 
@@ -230,67 +231,67 @@ public:
 		}
 
 		// publisher for the real robot inputs (thrust, roll, pitch, yawrate)
-		p_bodytwist = n.advertise<geometry_msgs::Twist>("/crazyflie/cmd_vel", 1);
+		//p_bodytwist = n.advertise<geometry_msgs::Twist>("/crazyflie/cmd_vel", 1);
 
 		// publisher for the control inputs of acados (motor speeds to be applied)
-		p_motvel = n.advertise<crazyflie_controller::PropellerSpeedsStamped>("/crazyflie/acados_motvel", 1);
+		//p_motvel = n.advertise<crazyflie_controller::PropellerSpeedsStamped>("/crazyflie/acados_motvel", 1);
 
 		// solution
-		p_ol_traj = n.advertise<crazyflie_controller::CrazyflieOpenloopTraj>("/cf_mpc/openloop_traj", 2);
+		//p_ol_traj = n.advertise<crazyflie_controller::CrazyflieOpenloopTraj>("/cf_mpc/openloop_traj", 2);
 
 		// subscriber of estimator state
-		s_estimator = n.subscribe("/cf_estimator/state_estimate", 5, &NMPC::iteration, this);
+		//s_estimator = n.subscribe("/cf_estimator/state_estimate", 5, &NMPC::iteration, this);
+
+    //ROS Publishers 
+    right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1000);
+    left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1000);
+
+    //ins_pose_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 1000, &AdaptiveSlidingModeControl::insCallback, this);
+    local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, &NMPC::velocityCallback, this);
 
 		// Initializing control inputs
 		for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
 
-		// Steady-state control input value
+		/*// Steady-state control input value
 		// (Kg)
 		mq = 33e-3;
 		// (N/kRPM^2)
 		Ct = 3.25e-4;
 		// steady state prop speed (kRPM)
-		uss = sqrt((mq*g0)/(4*Ct));
+		uss = sqrt((mq*g0)/(4*Ct));*/
 
-		const char * c = ref_traj.c_str();
+		//const char * c = ref_traj.c_str();
 
-		// Pre-load the trajectory
+		/*// Pre-load the trajectory
 		N_STEPS = readDataFromFile(c, precomputed_traj);
 		if (N_STEPS == 0){
 			ROS_WARN("Cannot load CasADi optimal trajectory!");
 		}
 		else{
 			ROS_INFO_STREAM("Number of steps of selected trajectory: " << N_STEPS << endl);
-		}
+		}*/
 		// Initialize dynamic reconfigure options
-		xq_des = 0;
-		yq_des = 0;
-		zq_des = 0;
+		u_des = 1.3;
+		v_des = 0;
+		r_des = 0;
+
+    past_Tport = 0.0;
+    past_Tstbd = 0.0;
 
 		// Set number of trajectory iterations to zero initially
-		iter = 0;
+		//iter = 0;
 
 		// Set weight matrix values
-		Wdiag_xq	= 120.0 ;
-		Wdiag_yq	= 100.0 ;
-		Wdiag_zq	= 100.0 ;
-		Wdiag_qw	= 1.0e-3;
-		Wdiag_qx	= 1.0e-3;
-		Wdiag_qy	= 1.0e-3;
-		Wdiag_qz	= 1.0e-3;
-		Wdiag_vbx	= 7e-1  ;
-		Wdiag_vby	= 1.0   ;
-		Wdiag_vbz	= 4.0   ;
-		Wdiag_wx	= 1.0e-5;
-		Wdiag_wy	= 1.0e-5;
-		Wdiag_wz	= 10.0  ;
-		Wdiag_w1	= 0.06  ;
-		Wdiag_w2	= 0.06  ;
-		Wdiag_w3	= 0.06  ;
-		Wdiag_w4	= 0.06  ;
+		Wdiag_u	= 1e0 ;
+		Wdiag_v = 0.0 ;
+		Wdiag_r	= 1e0 ;
+		Wdiag_Tport	= 0.0;
+		Wdiag_Tstbd	= 0.0;
+		Wdiag_UTportdot	= 0.0  ;
+		Wdiag_UTstbddot	= 0.0   ;
 		}
 
-	void run()
+	/*void run()
 		{
 		ROS_DEBUG("Setting up the dynamic reconfigure panel and server");
 
@@ -300,9 +301,9 @@ public:
 			server.setCallback(f);
 
 		ros::spin();
-		}
+		}*/
 
-	void callback_dynamic_reconfigure(crazyflie_controller::crazyflie_paramsConfig &config, uint32_t level)
+	/*void callback_dynamic_reconfigure(crazyflie_controller::crazyflie_paramsConfig &config, uint32_t level)
 		{
 		if (level && CONTROLLER)
 			{
@@ -310,48 +311,38 @@ public:
 				{
 				ROS_INFO_STREAM("Tracking trajectory");
 				config.enable_regulation = false;
-				policy = Tracking;
+				//policy = Tracking;
 				}
 			if(config.enable_regulation)
 				{
 				config.enable_traj_tracking = false;
-				xq_des = config.xq_des;
-				yq_des = config.yq_des;
-				zq_des = config.zq_des;
-				policy = Regulation;
+				u_des = config.u_des;
+				v_des = config.v_des;
+				r_des = config.r_des;
+				//policy = Regulation;
 				}
 				ROS_INFO_STREAM(
 					fixed << showpos << "Quad status" << endl
 					<< "NMPC for regulation: " <<  (config.enable_regulation?"ON":"off") << endl
 					<< "NMPC trajectory tracker: " <<  (config.enable_traj_tracking?"ON":"off") << endl
-					<< "Current regulation point: " << xq_des << ", " << yq_des << ", " << zq_des << endl
+					<< "Current regulation point: " << u_des << ", " << v_des << ", " << r_des << endl
 				);
 			}
 
 		if (level && WEIGHT_MATRICES)
 		 {
 				ROS_INFO("Changing the weight of NMPC matrices!");
-				Wdiag_xq	= config.Wdiag_xq;
-				Wdiag_yq	= config.Wdiag_yq;
-				Wdiag_zq	= config.Wdiag_zq;
-				Wdiag_qw	= config.Wdiag_qw;
-				Wdiag_qx	= config.Wdiag_qx;
-				Wdiag_qy	= config.Wdiag_qy;
-				Wdiag_qz	= config.Wdiag_qz;
-				Wdiag_vbx	= config.Wdiag_vbx;
-				Wdiag_vby	= config.Wdiag_vby;
-				Wdiag_vbz	= config.Wdiag_vbz;
-				Wdiag_wx	= config.Wdiag_wx;
-				Wdiag_wy	= config.Wdiag_wy;
-				Wdiag_wz	= config.Wdiag_wz;
-				Wdiag_w1	= config.Wdiag_w1;
-				Wdiag_w2	= config.Wdiag_w2;
-				Wdiag_w3	= config.Wdiag_w3;
-				Wdiag_w4	= config.Wdiag_w4;
+				Wdiag_u	= config.Wdiag_u;
+				Wdiag_v	= config.Wdiag_v;
+				Wdiag_r	= config.Wdiag_r;
+				Wdiag_Tport	= config.Wdiag_Tport;
+				Wdiag_Tstbd	= config.Wdiag_Tstbd;
+				Wdiag_UTportdot	= config.Wdiag_UTportdot;
+				Wdiag_UTstbddot	= config.Wdiag_UTstbddot;
 		 }
-		}
+		}*/
 
-	int readDataFromFile(const char* fileName, std::vector<std::vector<double> > &data)
+	/*int readDataFromFile(const char* fileName, std::vector<std::vector<double> > &data)
 		{
 		std::ifstream file(fileName);
 		std::string line;
@@ -379,9 +370,9 @@ public:
 			}
 
 		return num_of_steps;
-		}
+		}*/
 
-	euler quatern2euler(Quaterniond* q)
+	/*euler quatern2euler(Quaterniond* q)
 		{
 
 		euler angle;
@@ -401,9 +392,9 @@ public:
 		angle.psi	   = psi;
 
 		return angle;
-		}
+		}*/
 
-	double deg2Rad(double deg)
+	/*double deg2Rad(double deg)
 		{
 		return deg / 180.0 * pi;
 		}
@@ -411,32 +402,40 @@ public:
 	double rad2Deg(double rad)
 		{
 		return rad * 180.0 / pi;
-		}
+		}*/
 
 	void nmpcReset()
 		{
 		acados_free();
 		}
 
-	int krpm2pwm(double Krpm)
+	/*int krpm2pwm(double Krpm)
 		{
 		int pwm = ((Krpm*1000)-4070.3)/0.2685;
 		return pwm;
-		}
+		}*/
 
-	void iteration(const crazyflie_controller::CrazyflieStateStampedPtr& msg)
+  void velocityCallback(const geometry_msgs::Vector3::ConstPtr& _vel)
+  {
+    u_callback = _vel -> x;
+    v_callback = _vel -> y;
+    r_callback = _vel -> z;
+  }
+
+
+	void control()
 		{
-			try{
-					switch(policy){
+			//try{
+					/*switch(policy){
 
 					  case Regulation:
 					  {
 					    // Update regulation point
 					    for (k = 0; k < N+1; k++)
 							{
-							  yref_sign[k * NY + 0] = xq_des; // xq
-							  yref_sign[k * NY + 1] = yq_des;	// yq
-							  yref_sign[k * NY + 2] = zq_des;	// zq
+							  yref_sign[k * NY + 0] = u_des; // u
+							  yref_sign[k * NY + 1] = v_des;	// v
+							  yref_sign[k * NY + 2] = r_des;	// r
 							  yref_sign[k * NY + 3] = 1.00;		// qw
 							  yref_sign[k * NY + 4] = 0.00;		// qx
 							  yref_sign[k * NY + 5] = 0.00;		// qy
@@ -512,8 +511,21 @@ public:
 								    yref_sign[k * NY + 16] = uss;
 						      }
 					  }
-					  break;
-					}
+					  break;*/
+            // Update regulation point
+					    for (k = 0; k < N+1; k++)
+							{
+							  yref_sign[k * NY + 0] = u_des; // u
+							  yref_sign[k * NY + 1] = v_des;	// v
+							  yref_sign[k * NY + 2] = r_des;	// r
+							  yref_sign[k * NY + 3] = 0.00;		// Tport
+							  yref_sign[k * NY + 4] = 0.00;		// Tstbd
+							  yref_sign[k * NY + 5] = 0.00;		// UTportdot
+							  yref_sign[k * NY + 6] = 0.00;		// UTstbddot
+					    }
+					    //break;
+
+					//}
 
 			// --- Set Weights
 			for (ii = 0; ii < ((NY)*(NY)); ii++) {
@@ -523,40 +535,25 @@ public:
 				acados_in.WN[ii] = 0.0;
 			}
 
-			acados_in.W[0+0*(NU+NX)]   = Wdiag_xq;
-			acados_in.W[1+1*(NU+NX)]   = Wdiag_yq;
-			acados_in.W[2+2*(NU+NX)]   = Wdiag_zq;
-			acados_in.W[3+3*(NU+NX)]   = Wdiag_qw;
-			acados_in.W[4+4*(NU+NX)]   = Wdiag_qx;
-			acados_in.W[5+5*(NU+NX)]   = Wdiag_qy;
-			acados_in.W[6+6*(NU+NX)]   = Wdiag_qz;
-			acados_in.W[7+7*(NU+NX)]   = Wdiag_vbx;
-			acados_in.W[8+8*(NU+NX)]   = Wdiag_vby;
-			acados_in.W[9+9*(NU+NX)]   = Wdiag_vbz;
-			acados_in.W[10+10*(NU+NX)] = Wdiag_wx;
-			acados_in.W[11+11*(NU+NX)] = Wdiag_wy;
-			acados_in.W[12+12*(NU+NX)] = Wdiag_wz;
-			acados_in.W[13+13*(NU+NX)] = Wdiag_w1;
-			acados_in.W[14+14*(NU+NX)] = Wdiag_w2;
-			acados_in.W[15+15*(NU+NX)] = Wdiag_w3;
-			acados_in.W[16+16*(NU+NX)] = Wdiag_w4;
+			acados_in.W[0+0*(NU+NX)]   = Wdiag_u;
+			acados_in.W[1+1*(NU+NX)]   = Wdiag_v;
+			acados_in.W[2+2*(NU+NX)]   = Wdiag_r;
+			acados_in.W[3+3*(NU+NX)]   = Wdiag_Tport;
+			acados_in.W[4+4*(NU+NX)]   = Wdiag_Tstbd;
+			acados_in.W[5+5*(NU+NX)]   = Wdiag_UTportdot;
+			acados_in.W[6+6*(NU+NX)]   = Wdiag_UTstbddot;
 
-			acados_in.WN[0+0*(NX)]   = Wdiag_xq*WN_factor;
-			acados_in.WN[1+1*(NX)]   = Wdiag_yq*WN_factor;
-			acados_in.WN[2+2*(NX)]   = Wdiag_zq*WN_factor;
-			acados_in.WN[3+3*(NX)]   = Wdiag_qw*WN_factor;
-			acados_in.WN[4+4*(NX)]   = Wdiag_qx*WN_factor;
-			acados_in.WN[5+5*(NX)]   = Wdiag_qy*WN_factor;
-			acados_in.WN[6+6*(NX)]   = Wdiag_qz*WN_factor;
-			acados_in.WN[7+7*(NX)]   = Wdiag_vbx*WN_factor;
-			acados_in.WN[8+8*(NX)]   = Wdiag_vby*WN_factor;
-			acados_in.WN[9+9*(NX)]   = Wdiag_vbz*WN_factor;
-			acados_in.WN[10+10*(NX)] = Wdiag_wx*WN_factor;
-			acados_in.WN[11+11*(NX)] = Wdiag_wy*WN_factor;
-			acados_in.WN[12+12*(NX)] = Wdiag_wz*WN_factor;
+			acados_in.WN[0+0*(NX)]   = Wdiag_u*WN_factor;
+			acados_in.WN[1+1*(NX)]   = Wdiag_v*WN_factor;
+			acados_in.WN[2+2*(NX)]   = Wdiag_r*WN_factor;
+			acados_in.WN[3+3*(NX)]   = Wdiag_Tport*WN_factor;
+			acados_in.WN[4+4*(NX)]   = Wdiag_Tstbd*WN_factor;
+			acados_in.WN[5+5*(NX)]   = Wdiag_UTportdot*WN_factor;
+			acados_in.WN[6+6*(NX)]   = Wdiag_UTstbddot*WN_factor;
+
 
 			// --- Read Estimate
-			// position
+			/*// position
 			acados_in.x0[xq] = msg->pos.x;
 			acados_in.x0[yq] = msg->pos.y;
 			acados_in.x0[zq] = msg->pos.z;
@@ -575,7 +572,15 @@ public:
 			// rates
 			acados_in.x0[wx] = msg->rates.x;
 			acados_in.x0[wy] = msg->rates.y;
-			acados_in.x0[wz] = msg->rates.z;
+			acados_in.x0[wz] = msg->rates.z;*/
+
+      //velocities
+      acados_in.x0[u] = u_callback;
+			acados_in.x0[v] = v_callback;
+			acados_in.x0[r] = r_callback;
+      acados_in.x0[Tport] = past_Tport;
+      acados_in.x0[Tstbd] = past_Tstbd;
+      
 
 			// --- acados NMPC
 			ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
@@ -619,29 +624,34 @@ public:
 			ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
 
 			// get solution at stage N = 1
-			ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "u", (void *)acados_out.u1);
+			ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
 
 			// get solution at stage N = 4 which compensates 60 ms delay
-			ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 4, "x", (void *)acados_out.x4);
+			//ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 4, "x", (void *)acados_out.x4);
 
 			// publish acados output
-			crazyflie_controller::PropellerSpeedsStamped propellerspeeds;
-			propellerspeeds.header.stamp = ros::Time::now();
+			//crazyflie_controller::PropellerSpeedsStamped propellerspeeds;
+			//propellerspeeds.header.stamp = ros::Time::now();
 
-			if (FIXED_U0 == 1) {
-				propellerspeeds.w1 =  acados_out.u1[w1];
-				propellerspeeds.w2 =  acados_out.u1[w2];
-				propellerspeeds.w3 =  acados_out.u1[w3];
-				propellerspeeds.w4 =  acados_out.u1[w4];
+			/*if (FIXED_U0 == 1) {
+				propellerspeeds.UTportdot =  acados_out.u1[UTportdot];
+				propellerspeeds.UTstbddot =  acados_out.u1[UTstbddot];
 			} else {
-				propellerspeeds.w1 =  acados_out.u0[w1];
-				propellerspeeds.w2 =  acados_out.u0[w2];
-				propellerspeeds.w3 =  acados_out.u0[w3];
-				propellerspeeds.w4 =  acados_out.u0[w4];
+				propellerspeeds.UTportdot =  acados_out.u0[UTportdot];
+				propellerspeeds.UTstbddot =  acados_out.u0[ITstbddot];
 			}
-			p_motvel.publish(propellerspeeds);
+			p_motvel.publish(propellerspeeds);*/
 
-			// Select the set of optimal states to calculate the real cf control inputs
+      left_thruster.data =  acados_out.x1[Tport];
+			right_thruster.data =  acados_out.x1[Tstbd];
+
+      right_thruster_pub.publish(right_thruster);
+      left_thruster_pub.publish(left_thruster);
+
+      past_Tport = acados_out.x1[Tport];
+      past_Tstbd = acados_out.x1[Tstbd];
+
+			/*// Select the set of optimal states to calculate the real cf control inputs
 			Quaterniond q_acados_out;
 			q_acados_out.w() = acados_out.x4[qw];
 			q_acados_out.x() = acados_out.x4[qx];
@@ -667,10 +677,10 @@ public:
 			// angular_z -> yaw rate
 			bodytwist.angular.z = rad2Deg(acados_out.x4[wz]);
 
-			p_bodytwist.publish(bodytwist);
+			p_bodytwist.publish(bodytwist);*/
 
 			// --- Publish openloop
-			#if PUB_OPENLOOP_TRAJ
+			/*#if PUB_OPENLOOP_TRAJ
 
 			crazyflie_controller::CrazyflieOpenloopTraj traj_msg;
 			traj_msg.header.stamp = ros::Time::now();
@@ -709,26 +719,30 @@ public:
 
 			p_ol_traj.publish(traj_msg);
 			#endif
-			}
+			}*/
 
-		catch (int acados_status)
+		/*catch (int acados_status)
 			{
 			ROS_INFO_STREAM("An exception occurred. Exception Nr. " << acados_status << endl);
-			}
+			}*/
 		}
 	};
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "cf_nmpc");
+	ros::init(argc, argv, "acados_mpc");
 
 	ros::NodeHandle n("~");
+  NMPC nmpc(n);
+  ros::Rate loop_rate(50);
+	//std::string ref_traj;
+	//n.getParam("ref_traj", ref_traj);
+	//nmpc.run();
 
-	std::string ref_traj;
-	n.getParam("ref_traj", ref_traj);
-
-	NMPC nmpc(n,ref_traj);
-	nmpc.run();
-
+  while(ros::ok()){
+    nmpc.control();
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
 	return 0;
 }

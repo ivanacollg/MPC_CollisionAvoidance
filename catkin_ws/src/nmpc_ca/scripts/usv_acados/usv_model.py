@@ -42,7 +42,7 @@ def usv_model():
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()
 
-    model_name = "USV_model"
+    model_name = "usv_model"
 
     # load track parameters
     #[s0, _, _, _, kapparef] = getTrack(track)

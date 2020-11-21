@@ -26,7 +26,7 @@
 from acados_template import *
 def export_ode_model():
 
-    model_name = 'USV_model'
+    model_name = 'usv_model'
 
     #USV model coefficients
     X_u_dot = -2.25
@@ -95,15 +95,60 @@ def export_ode_model():
     p = []
 
     # dynamics
-    model = acados_dae()
+    #model = acados_dae()
+    model = types.SimpleNamespace()
+    constraint = types.SimpleNamespace()
+
+    #constraints
+    # Model bounds
+    model.u_min = -1.5
+    model.u_max = 1.5
+
+    # state bounds
+    model.Tport_min = -30
+    model.Tstbd_min = -30
+    model.Tport_max = 35
+    model.Tstbd_max = 35
+
+    model.r_min = -1.0 # minimum angular velocity [rad/s]
+    model.r_max = 1.0  # maximum angular velocity [rad/s]
+    # input bounds
+    model.Tstbddot_min = -10 # minimum change rate of stering angle [rad/s]
+    model.Tstbddot_max = 10  # maximum change rate of steering angle [rad/s]
+    model.Tportdot_min = -10 # -10.0  # minimum throttle change rate
+    model.Tportdot_max = 10  # 10.0  # maximum throttle change rate
+
+    constraint.expr = vertcat(u,Tport,Tstbd)
+
+    # Define model struct
+    params = types.SimpleNamespace()
+    params.X_u_dot = X_u_dot
+    params.Y_v_dot = Y_v_dot
+    params.Y_r_dot = Y_r_dot
+    params.N_v_dot = N_v_dot
+    params.N_r_dot = N_r_dot
+    #params.Xu = Xu
+    #params.Xuu = Xuu
+    params.Yvv = Yvv
+    params.Yvr = Yvr
+    params.Yrv = Yrv
+    params.Yrr = Yrr
+    params.Nvv = Nvv
+    params.Nvr = Nvr
+    params.Nrv = Nrv
+    params.m = m
+    params.Iz = Iz
+    params.B = B
+    params.c = c
 
     model.f_impl_expr = f_impl
     model.f_expl_expr = f_expl
     model.x = x
     model.xdot = xdot
-    model.u = u
+    model.u = U
     model.z = z
     model.p = p
     model.name = model_name
+    model.params = params
 
-    return model
+    return model, constraint
