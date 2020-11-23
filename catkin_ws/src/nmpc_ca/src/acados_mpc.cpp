@@ -96,7 +96,7 @@ using std::showpos;
 // acados dims
 
 // Number of intervals in the horizon
-#define N 100
+#define N 20
 // Number of differential state variables
 #define NX 5
 // Number of control inputs
@@ -122,7 +122,7 @@ class NMPC
 		v = 1,
 		r = 2,
 		Tport = 3,
-	  Tstbd = 4
+	  	Tstbd = 4
 	};
 
 	enum controlInputs{
@@ -155,7 +155,8 @@ class NMPC
 
 	struct solver_input{
 		double x0[NX];
-		double yref[(NY*N)];
+		//double yref[(NY*N)];
+		double yref[NY];
 		double yref_e[NYN];
 		double W[NY*NY];
 		double WN[NX*NX];
@@ -174,11 +175,11 @@ class NMPC
 	//ros::Subscriber s_motors;
 
 
-  ros::Publisher right_thruster_pub;
-  ros::Publisher left_thruster_pub;
+	ros::Publisher right_thruster_pub;
+	ros::Publisher left_thruster_pub;
 
-  //ros::Subscriber ins_pose_sub;
-  ros::Subscriber local_vel_sub;
+	//ros::Subscriber ins_pose_sub;
+	ros::Subscriber local_vel_sub;
 
 	// Variables for joy callback
 	/*double joy_roll,joy_pitch,joy_yaw;
@@ -194,9 +195,9 @@ class NMPC
 
 	// Variables for dynamic reconfigure
 	double u_des, v_des, r_des;
-  double u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
-  std_msgs::Float64 right_thruster;
-  std_msgs::Float64 left_thruster;
+	double u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
+	std_msgs::Float64 right_thruster;
+	std_msgs::Float64 left_thruster;
 
 	// Variables for dynamic reconfigure
 	double Wdiag_u,Wdiag_v,Wdiag_r;
@@ -221,11 +222,11 @@ public:
 		{
 
 		int status = 0;
-		double WN_factor = 5;
+		//double WN_factor = 5;
 
 		status = acados_create();
 
-		if (status){
+		if (status != 0){
 			ROS_INFO_STREAM("acados_create() returned status " << status << ". Exiting." << endl);
 			exit(1);
 		}
@@ -242,12 +243,12 @@ public:
 		// subscriber of estimator state
 		//s_estimator = n.subscribe("/cf_estimator/state_estimate", 5, &NMPC::iteration, this);
 
-    //ROS Publishers 
-    right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1000);
-    left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1000);
+		//ROS Publishers 
+		right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1);
+		left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1);
 
-    //ins_pose_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 1000, &AdaptiveSlidingModeControl::insCallback, this);
-    local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, &NMPC::velocityCallback, this);
+		//ins_pose_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 1000, &AdaptiveSlidingModeControl::insCallback, this);
+		local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
 
 		// Initializing control inputs
 		for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
@@ -271,24 +272,32 @@ public:
 			ROS_INFO_STREAM("Number of steps of selected trajectory: " << N_STEPS << endl);
 		}*/
 		// Initialize dynamic reconfigure options
-		u_des = 1.3;
+		u_des = 1.0;
 		v_des = 0;
 		r_des = 0;
 
-    past_Tport = 0.0;
-    past_Tstbd = 0.0;
+		past_Tport = 0.0;
+		past_Tstbd = 0.0;
+		u_callback = 0.001;
+
+		acados_in.x0[u] = u_callback;
+		acados_in.x0[v] = 0.0;
+		acados_in.x0[r] = 0.0;
+		acados_in.x0[Tport] = past_Tport;
+		acados_in.x0[Tstbd] = past_Tstbd;
+
 
 		// Set number of trajectory iterations to zero initially
 		//iter = 0;
 
 		// Set weight matrix values
-		Wdiag_u	= 1e0 ;
+		/*Wdiag_u	= 1e0 ;
 		Wdiag_v = 0.0 ;
 		Wdiag_r	= 1e0 ;
 		Wdiag_Tport	= 0.0;
 		Wdiag_Tstbd	= 0.0;
-		Wdiag_UTportdot	= 0.0  ;
-		Wdiag_UTstbddot	= 0.0   ;
+		Wdiag_UTportdot	= 0.0;
+		Wdiag_UTstbddot	= 0.0;*/
 		}
 
 	/*void run()
@@ -415,13 +424,15 @@ public:
 		return pwm;
 		}*/
 
-  void velocityCallback(const geometry_msgs::Vector3::ConstPtr& _vel)
-  {
-    u_callback = _vel -> x;
-    v_callback = _vel -> y;
-    r_callback = _vel -> z;
-  }
-
+	void velocityCallback(const geometry_msgs::Vector3::ConstPtr& _vel)
+	{
+		u_callback = _vel -> x;
+		if (u_callback == 0){
+			u_callback = 0.001;
+		}
+		v_callback = _vel -> y;
+		r_callback = _vel -> z;
+	}
 
 	void control()
 		{
@@ -513,22 +524,24 @@ public:
 					  }
 					  break;*/
             // Update regulation point
-					    for (k = 0; k < N+1; k++)
-							{
-							  yref_sign[k * NY + 0] = u_des; // u
-							  yref_sign[k * NY + 1] = v_des;	// v
-							  yref_sign[k * NY + 2] = r_des;	// r
-							  yref_sign[k * NY + 3] = 0.00;		// Tport
-							  yref_sign[k * NY + 4] = 0.00;		// Tstbd
-							  yref_sign[k * NY + 5] = 0.00;		// UTportdot
-							  yref_sign[k * NY + 6] = 0.00;		// UTstbddot
-					    }
+			/*
+			for (k = 0; k < N+1; k++)
+				{
+					yref_sign[k * NY + 0] = u_des; // u
+					yref_sign[k * NY + 1] = v_des;	// v
+					yref_sign[k * NY + 2] = r_des;	// r
+					yref_sign[k * NY + 3] = 0.00;		// Tport
+					yref_sign[k * NY + 4] = 0.00;		// Tstbd
+					yref_sign[k * NY + 5] = 0.00;		// UTportdot
+					yref_sign[k * NY + 6] = 0.00;		// UTstbddot
+				}
+			*/
 					    //break;
 
 					//}
 
 			// --- Set Weights
-			for (ii = 0; ii < ((NY)*(NY)); ii++) {
+			/*for (ii = 0; ii < ((NY)*(NY)); ii++) {
 				acados_in.W[ii] = 0.0;
 			}
 			for (ii = 0; ii < ((NX)*(NX)); ii++) {
@@ -549,7 +562,7 @@ public:
 			acados_in.WN[3+3*(NX)]   = Wdiag_Tport*WN_factor;
 			acados_in.WN[4+4*(NX)]   = Wdiag_Tstbd*WN_factor;
 			acados_in.WN[5+5*(NX)]   = Wdiag_UTportdot*WN_factor;
-			acados_in.WN[6+6*(NX)]   = Wdiag_UTstbddot*WN_factor;
+			acados_in.WN[6+6*(NX)]   = Wdiag_UTstbddot*WN_factor;*/
 
 
 			// --- Read Estimate
@@ -574,19 +587,19 @@ public:
 			acados_in.x0[wy] = msg->rates.y;
 			acados_in.x0[wz] = msg->rates.z;*/
 
-      //velocities
-      acados_in.x0[u] = u_callback;
+			
+      		acados_in.x0[u] = u_callback;
 			acados_in.x0[v] = v_callback;
 			acados_in.x0[r] = r_callback;
-      acados_in.x0[Tport] = past_Tport;
-      acados_in.x0[Tstbd] = past_Tstbd;
-      
+      		acados_in.x0[Tport] = past_Tport;
+      		acados_in.x0[Tstbd] = past_Tstbd;
+			//ROS_INFO_STREAM("state speed: " << acados_in.x0[u] << endl);
 
 			// --- acados NMPC
 			ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
 			ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", acados_in.x0);
 
-			for (i = 0; i < N; i++) {
+			/*for (i = 0; i < N; i++) {
 	    	for (j = 0; j < NY; ++j) acados_in.yref[i*NY + j] = yref_sign[i*NY + j];
 			}
 
@@ -596,9 +609,9 @@ public:
 				{
 				ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "yref", acados_in.yref + ii*NY);
 				}
-			ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);
+			ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);*/
 
-			#if SET_WEIGHTS
+			/*#if SET_WEIGHTS
 			for (ii = 0; ii < N; ii++)
 				{
 				ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "W", acados_in.W);
@@ -610,18 +623,40 @@ public:
 			#if FIXED_U0
 				ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbu", acados_out.u1);
 				ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubu", acados_out.u1);
-			#endif
+			#endif*/
+
+			acados_in.yref[0] = u_des; // u
+			acados_in.yref[1] = v_des;	// v
+			acados_in.yref[2] = r_des;	// r
+			acados_in.yref[3] = 0.00;	// Tport
+			acados_in.yref[4] = 0.00;	// Tstbd
+			acados_in.yref[5] = 0.00;	// UTportdot
+			acados_in.yref[6] = 0.00;	// UTstbddot
+
+			acados_in.yref_e[0] = u_des;	// u
+			acados_in.yref_e[1] = v_des;	// v
+			acados_in.yref_e[2] = r_des;	// r
+			acados_in.yref_e[3] = 0.00;	// Tport
+			acados_in.yref_e[4] = 0.00;	// Tstbd
+
+			for (ii = 0; ii < N; ii++)
+				{
+				ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "yref", acados_in.yref);
+				}
+			ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);
 
 			// call solver
 			acados_status = acados_solve();
-
+			if (acados_status != 0){
+				ROS_INFO_STREAM("acados returned status " << acados_status << endl);
+			}
 			// assign output signals
 			acados_out.status = acados_status;
 			acados_out.KKT_res = (double)nlp_out->inf_norm_res;
 			acados_out.cpu_time = (double)nlp_out->total_time;
 
 			// get solution
-			ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
+			//ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
 
 			// get solution at stage N = 1
 			ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
@@ -642,14 +677,20 @@ public:
 			}
 			p_motvel.publish(propellerspeeds);*/
 
-      left_thruster.data =  acados_out.x1[Tport];
+			left_thruster.data =  acados_out.x1[Tport];
 			right_thruster.data =  acados_out.x1[Tstbd];
 
-      right_thruster_pub.publish(right_thruster);
-      left_thruster_pub.publish(left_thruster);
+			right_thruster_pub.publish(right_thruster);
+			left_thruster_pub.publish(left_thruster);
 
-      past_Tport = acados_out.x1[Tport];
-      past_Tstbd = acados_out.x1[Tstbd];
+			past_Tport = acados_out.x1[Tport];
+			past_Tstbd = acados_out.x1[Tstbd];
+
+			/*acados_in.x0[u] = acados_out.x1[u];
+			acados_in.x0[v] = acados_out.x1[v];
+			acados_in.x0[r] = acados_out.x1[r];
+			acados_in.x0[Tport] = past_Tport;
+			acados_in.x0[Tstbd] = past_Tstbd;*/
 
 			/*// Select the set of optimal states to calculate the real cf control inputs
 			Quaterniond q_acados_out;
@@ -718,8 +759,8 @@ public:
 				}
 
 			p_ol_traj.publish(traj_msg);
-			#endif
-			}*/
+			#endif*/
+			//}
 
 		/*catch (int acados_status)
 			{
@@ -734,7 +775,7 @@ int main(int argc, char **argv)
 
 	ros::NodeHandle n("~");
   NMPC nmpc(n);
-  ros::Rate loop_rate(50);
+  ros::Rate loop_rate(20);
 	//std::string ref_traj;
 	//n.getParam("ref_traj", ref_traj);
 	//nmpc.run();

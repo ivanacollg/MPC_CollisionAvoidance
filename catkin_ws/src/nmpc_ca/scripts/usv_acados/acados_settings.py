@@ -59,7 +59,7 @@ def acados_settings(Tf, N):
     ocp.model = model_ac
 
     # define constraint
-    model_ac.con_h_expr = constraint.expr
+    #model_ac.con_h_expr = constraint.expr
 
     # set dimensions
     nx = model.x.size()[0]
@@ -68,96 +68,102 @@ def acados_settings(Tf, N):
     ny_e = nx
 
     ocp.dims.N = N
-    ns = 2
-    nsh = 2
+    #ns = 2
+    #nsh = 2
 
     # set cost
-    Q = np.diag([ 1e0, 0, 1e0, 0, 0])
-
+    Q = np.diag([ 1e3, 1e-3, 1e3, 1e-1, 1e-1])
+    
     R = np.eye(nu)
-    R[0, 0] = 0
-    R[1, 1] = 0
+    R[0, 0] = 1e-2
+    R[1, 1] = 1e-2
 
-    Qe = np.diag([ 5e0, 0, 5e0, 0, 0])
+    Qe = np.diag([ 5e3, 5e-3, 5e3, 5e-1, 5e-1])
 
     ocp.cost.cost_type = "LINEAR_LS"
     ocp.cost.cost_type_e = "LINEAR_LS"
-    unscale = N / Tf
+    #unscale = N / Tf
 
-    ocp.cost.W = unscale * scipy.linalg.block_diag(Q, R)
-    ocp.cost.W_e = Qe / unscale
+    #ocp.cost.W = unscale * scipy.linalg.block_diag(Q, R)
+    #ocp.cost.W_e = Qe / unscale
+    ocp.cost.W = scipy.linalg.block_diag(Q, R)
+    ocp.cost.W_e = Qe
 
     Vx = np.zeros((ny, nx))
     Vx[:nx, :nx] = np.eye(nx)
     ocp.cost.Vx = Vx
 
     Vu = np.zeros((ny, nu))
-    #Vu[5, 0] = 1.0
-    #Vu[6, 1] = 1.0
+    Vu[5, 0] = 1.0
+    Vu[6, 1] = 1.0
     ocp.cost.Vu = Vu
 
     Vx_e = np.zeros((ny_e, nx))
     Vx_e[:nx, :nx] = np.eye(nx)
     ocp.cost.Vx_e = Vx_e
 
-    ocp.cost.zl = 100 * np.ones((ns,))
+    '''ocp.cost.zl = 0 * np.ones((ns,)) #previously 100
     ocp.cost.Zl = 0 * np.ones((ns,))
-    ocp.cost.zu = 100 * np.ones((ns,))
-    ocp.cost.Zu = 0 * np.ones((ns,))
+    ocp.cost.zu = 0 * np.ones((ns,)) #previously 100
+    ocp.cost.Zu = 0 * np.ones((ns,))'''
 
     # set intial references
-    ocp.cost.yref = np.array([1, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0])
     ocp.cost.yref_e = np.array([0, 0, 0, 0, 0])
 
     # setting constraints
-    ocp.constraints.lbx = np.array([model.u_min])
-    ocp.constraints.ubx = np.array([model.u_max])
-    ocp.constraints.idxbx = np.array([0])
+    ocp.constraints.lbx = np.array([model.u_min, model.u_min, model.r_min, model.Tport_min, model.Tstbd_min])
+    ocp.constraints.ubx = np.array([model.u_max, model.u_max, model.r_max, model.Tport_max, model.Tstbd_max])
+    ocp.constraints.idxbx = np.array([0,1,2,3,4])
     ocp.constraints.lbu = np.array([model.Tportdot_min, model.Tstbddot_min])
     ocp.constraints.ubu = np.array([model.Tportdot_max, model.Tstbddot_max])
     ocp.constraints.idxbu = np.array([0, 1])
     # ocp.constraints.lsbx=np.zero s([1])
     # ocp.constraints.usbx=np.zeros([1])
     # ocp.constraints.idxsbx=np.array([1])
-    ocp.constraints.lh = np.array(
+    '''ocp.constraints.lh = np.array(
         [
-            #constraint.along_min,
-            #constraint.alat_min,
             model.u_min,
+            model.u_min,
+            model.r_min,
             model.Tport_min,
             model.Tstbd_min,
         ]
     )
     ocp.constraints.uh = np.array(
         [
-            #constraint.along_max,
-            #constraint.alat_max,
             model.u_max,
+            model.u_max,
+            model.r_max,
             model.Tport_max,
             model.Tstbd_max,
         ]
-    )
-    ocp.constraints.lsh = np.zeros(nsh)
+    )'''
+    '''ocp.constraints.lsh = np.zeros(nsh)
     ocp.constraints.ush = np.zeros(nsh)
-    ocp.constraints.idxsh = np.array([0, 2])
+    ocp.constraints.idxsh = np.array([0, 2])'''
 
     # set intial condition
     ocp.constraints.x0 = model.x0
 
     # set QP solver and integration
     ocp.solver_options.tf = Tf
-    # ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'
+    #ocp.solver_options.qp_solver = 'FULL_CONDENSING_QPOASES'
     ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"
-    ocp.solver_options.nlp_solver_type = "SQP_RTI"
+    #ocp.solver_options.nlp_solver_type = "SQP_RTI"
+    #ocp.solver_options.nlp_solver_type = "SQP"
     ocp.solver_options.hessian_approx = "GAUSS_NEWTON"
     ocp.solver_options.integrator_type = "ERK"
-    ocp.solver_options.sim_method_num_stages = 4
-    ocp.solver_options.sim_method_num_steps = 3
+    #ocp.solver_options.sim_method_num_stages = 4
+    #ocp.solver_options.sim_method_num_steps = 3
 
-    # ocp.solver_options.qp_solver_tol_stat = 1e-2
-    # ocp.solver_options.qp_solver_tol_eq = 1e-2
-    # ocp.solver_options.qp_solver_tol_ineq = 1e-2
-    # ocp.solver_options.qp_solver_tol_comp = 1e-2
+    #ocp.solver_options.nlp_solver_max_iter = 200
+    #ocp.solver_options.tol = 1e-4
+
+    #ocp.solver_options.qp_solver_tol_stat = 1e-2
+    #ocp.solver_options.qp_solver_tol_eq = 1e-2
+    #ocp.solver_options.qp_solver_tol_ineq = 1e-2
+    #ocp.solver_options.qp_solver_tol_comp = 1e-2
 
     # create solver
     acados_solver = AcadosOcpSolver(ocp, json_file="acados_ocp.json")

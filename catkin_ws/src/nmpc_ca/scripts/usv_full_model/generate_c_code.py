@@ -171,9 +171,9 @@ ra.constraints.uh = np.array(
         model.Tstbd_max,
     ]
 )
-ra.constraints.lsh = np.zeros(nsh)
-ra.constraints.ush = np.zeros(nsh)
-ra.constraints.idxsh = np.array([0, 2])
+#ra.constraints.lsh = np.zeros(nsh)
+#ra.constraints.ush = np.zeros(nsh)
+#ra.constraints.idxsh = np.array([0, 2])
 
 
 ## set QP solver
