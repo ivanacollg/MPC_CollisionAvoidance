@@ -11,6 +11,14 @@ find_package(
 	catkin REQUIRED COMPONENTS
 	std_msgs
 	tf
+    roscpp
+    rospy 
+    std_msgs 
+    genmsg
+    sensor_msgs
+    tf2
+    tf2_ros
+    tf2_geometry_msgs
 )
 
 find_package(
