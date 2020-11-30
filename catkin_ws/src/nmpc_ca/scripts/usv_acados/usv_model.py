@@ -42,7 +42,7 @@ def usv_model():
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()
 
-    model_name = "USV_model"
+    model_name = "usv_model"
 
     # load track parameters
     #[s0, _, _, _, kapparef] = getTrack(track)
@@ -138,10 +138,10 @@ def usv_model():
     model.r_min = -1.0 # minimum angular velocity [rad/s]
     model.r_max = 1.0  # maximum angular velocity [rad/s]
     # input bounds
-    model.Tstbddot_min = -10 # minimum change rate of stering angle [rad/s]
-    model.Tstbddot_max = 10  # maximum change rate of steering angle [rad/s]
-    model.Tportdot_min = -10 # -10.0  # minimum throttle change rate
-    model.Tportdot_max = 10  # 10.0  # maximum throttle change rate
+    model.Tstbddot_min = -30 # minimum throttle change rate
+    model.Tstbddot_max = 30  # maximum throttle change rate
+    model.Tportdot_min = -30 # minimum throttle change rate
+    model.Tportdot_max = 30  # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
@@ -156,7 +156,7 @@ def usv_model():
     # define constraints struct
     #constraint.alat = Function("a_lat", [x, u], [a_lat])
     #constraint.pathlength = pathlength
-    constraint.expr = vertcat(u,Tport,Tstbd)
+    #constraint.expr = vertcat(u,v,r,Tport,Tstbd)
 
     # Define model struct
     params = types.SimpleNamespace()
@@ -165,8 +165,6 @@ def usv_model():
     params.Y_r_dot = Y_r_dot
     params.N_v_dot = N_v_dot
     params.N_r_dot = N_r_dot
-    #params.Xu = Xu
-    #params.Xuu = Xuu
     params.Yvv = Yvv
     params.Yvr = Yvr
     params.Yrv = Yrv

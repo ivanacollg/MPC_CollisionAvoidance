@@ -50,7 +50,7 @@ The simulation starts at s=-2m until one round is completed(s=8.71m). The beginn
 #[Sref, _, _, _, _] = getTrack(track)
 
 Tf = 1.0  # prediction horizon
-N = 100  # number of discretization steps
+N = 20  # number of discretization steps
 T = 10.00  # maximum simulation time[s]
 #sref_N = 3  # reference for final reference progress
 
@@ -70,10 +70,12 @@ simU = np.ndarray((Nsim, nu))
 tcomp_sum = 0
 tcomp_max = 0
 
+uref = 1.3
+
 # simulate
 for i in range(Nsim):
     # update reference
-    uref = 1.4 #u0 + #sref_N
+    #uref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (uref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
         yref=np.array([uref,0,0,0,0,0,0])
