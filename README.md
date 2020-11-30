@@ -9,7 +9,7 @@
   sudo apt install python3.7
 
 ```
-### Python deendencies
+### Python dependencies
 ```
 python3.7 -m pip install pip
 pip3.7 install numpy
