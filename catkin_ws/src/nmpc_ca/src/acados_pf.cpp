@@ -58,11 +58,14 @@ using std::showpos;
 class NMPC
     {
     enum systemStates{
-        u = 0,
-        v = 1,
-        r = 2,
-        Tport = 3,
-          Tstbd = 4
+        x_ = 0,
+        y_ = 1,
+        psi = 2,
+        u = 3,
+        v = 4,
+        r = 5,
+        Tport = 6,
+        Tstbd = 7
     };
 
     enum controlInputs{
@@ -85,12 +88,13 @@ class NMPC
     ros::Publisher right_thruster_pub;
     ros::Publisher left_thruster_pub;
     ros::Subscriber local_vel_sub;
+    ros::Subscriber local_pos_sub;
 
     unsigned int k,i,j,ii;
 
     // global variables
-    double u_des, v_des, r_des;
-    double u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
+    double x_des, y_des, psi_des, u_des, v_des, r_des;
+    double x_callback, y_callback, psi_callback, u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
     std_msgs::Float64 right_thruster;
     std_msgs::Float64 left_thruster;
 
@@ -119,11 +123,15 @@ public:
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
+        local_pos_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::positionCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
 
         // Define references (to be changed to subscribers)
+        x_des = 2.0;
+        y_des = 0.0;
+        psi_des = 0.0;
         u_des = 1.0;
         v_des = 0;
         r_des = 0;
@@ -134,6 +142,9 @@ public:
         u_callback = 0.001;
 
         // Initialize the state (x0)
+        acados_in.x0[x_] = 0.0;
+        acados_in.x0[y_] = 0.0;
+        acados_in.x0[psi] = 0.0;
         acados_in.x0[u] = u_callback;
         acados_in.x0[v] = 0.0;
         acados_in.x0[r] = 0.0;
@@ -155,9 +166,17 @@ public:
         r_callback = _vel -> z;
     }
 
+    void positionCallback(const geometry_msgs::Pose2D::ConstPtr& _pos)
+    {
+        x_callback = _pos -> x;
+        y_callback = _pos -> y;
+    }
+
     void control()
         {
-            
+            acados_in.x0[x_] = x_callback;
+            acados_in.x0[y_] = y_callback;
+            acados_in.x0[psi] = psi_callback;
             acados_in.x0[u] = u_callback;
             acados_in.x0[v] = v_callback;
             acados_in.x0[r] = r_callback;
@@ -168,19 +187,25 @@ public:
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", acados_in.x0);
 
-            acados_in.yref[0] = u_des;    // u
-            acados_in.yref[1] = v_des;    // v
-            acados_in.yref[2] = r_des;    // r
-            acados_in.yref[3] = 0.00;     // Tport
-            acados_in.yref[4] = 0.00;     // Tstbd
-            acados_in.yref[5] = 0.00;     // UTportdot
-            acados_in.yref[6] = 0.00;     // UTstbddot
+            acados_in.yref[0] = x_des;    // x
+            acados_in.yref[1] = y_des;    // y
+            acados_in.yref[2] = psi_des;  // psi
+            acados_in.yref[3] = u_des;    // u
+            acados_in.yref[4] = v_des;    // v
+            acados_in.yref[5] = r_des;    // r
+            acados_in.yref[6] = 0.00;     // Tport
+            acados_in.yref[7] = 0.00;     // Tstbd
+            acados_in.yref[8] = 0.00;     // UTportdot
+            acados_in.yref[9] = 0.00;     // UTstbddot
 
-            acados_in.yref_e[0] = u_des;    // u
-            acados_in.yref_e[1] = v_des;    // v
-            acados_in.yref_e[2] = r_des;    // r
-            acados_in.yref_e[3] = 0.00;     // Tport
-            acados_in.yref_e[4] = 0.00;     // Tstbd
+            acados_in.yref_e[0] = x_des;    // x
+            acados_in.yref_e[1] = y_des;    // y
+            acados_in.yref_e[2] = psi_des;  // psi
+            acados_in.yref_e[3] = u_des;    // u
+            acados_in.yref_e[4] = v_des;    // v
+            acados_in.yref_e[5] = r_des;    // r
+            acados_in.yref_e[6] = 0.00;     // Tport
+            acados_in.yref_e[7] = 0.00;     // Tstbd
 
             for (ii = 0; ii < N; ii++)
                 {

@@ -61,5 +61,15 @@ target_link_libraries(acados_mpc
 	${acados_lib}/libacados.so
 	${catkin_LIBRARIES}
 )
+
+# NMPC pf node
+add_executable(acados_pf src/acados_pf.cpp)
+target_link_libraries(acados_pf
+	${full_model_build}/libacados_ocp_solver_usv_model.so
+	#${acados_lib}/libacados.a
+	${acados_lib}/libacados.so
+	${catkin_LIBRARIES}
+)
+
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencfg)
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencpp)

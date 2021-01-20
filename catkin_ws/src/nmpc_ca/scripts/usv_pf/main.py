@@ -70,7 +70,9 @@ simU = np.ndarray((Nsim, nu))
 tcomp_sum = 0
 tcomp_max = 0
 
-uref = 1.3
+x_ref = 5
+y_ref = 1
+uref = 1.0
 
 # simulate
 for i in range(Nsim):
@@ -78,9 +80,9 @@ for i in range(Nsim):
     #uref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (uref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([uref,0,0,0,0,0,0])
+        yref=np.array([x_ref, y_ref, 0, uref, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([uref, 0, 0, 0, 0])
+    yref_N = np.array([x_ref, y_ref, 0, uref, 0, 0, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 

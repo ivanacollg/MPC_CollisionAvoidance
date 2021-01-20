@@ -78,12 +78,15 @@ def usv_model():
 
     ## CasADi Model
     # set up states & controls
+    x_ = MX.sym("x_")
+    y_ = MX.sym("y_")
+    psi = MX.sym("psi")
     u = MX.sym("u")
     v = MX.sym("v")
     r = MX.sym("r")
     Tport = MX.sym("Tport")
     Tstbd = MX.sym("Tstbd")
-    x = vertcat(u, v, r, Tport, Tstbd)
+    x = vertcat(x_, y_, psi, u, v, r, Tport, Tstbd)
 
     # controls
     UTportdot = MX.sym("UTportdot")
@@ -91,12 +94,15 @@ def usv_model():
     U = vertcat(UTportdot, UTstbddot)
 
     # xdot
+    x_dot = MX.sym("x_dot")
+    y_dot = MX.sym("y_dot")
+    psidot = MX.sym("psidot")
     udot = MX.sym("udot")
     vdot = MX.sym("vdot")
     rdot = MX.sym("rdot")
     Tportdot = MX.sym("Tportdot")
     Tstbddot = MX.sym("Tstbddot")
-    xdot = vertcat(udot, vdot, rdot, Tportdot, Tstbddot)
+    xdot = vertcat(x_dot, y_dot, psidot, udot, vdot, rdot, Tportdot, Tstbddot)
 
     # algebraic variables
     z = vertcat([])
@@ -114,6 +120,9 @@ def usv_model():
     Tu = Tport + c * Tstbd
     Tr = (Tport - c * Tstbd) * B / 2
     f_expl = vertcat(
+      u*cos(psi) - v*sin(psi),
+      u*sin(psi) + v*cos(psi),
+      r,
       (Tu - (-m + 2 * Y_v_dot)*v - (Y_r_dot + N_v_dot)*r*r - (-Xu*u - Xuu*fabs(u)*u)) / (m - X_u_dot),
       (-(m - X_u_dot)*u*r - (- Yv - Yvv*fabs(v) - Yvr*fabs(r))*v) / (m - Y_v_dot),
       (Tr - (-2*Y_v_dot*u*v - (Y_r_dot + N_v_dot)*r*u + X_u_dot*u*r) - (-Nr*r - Nrv*fabs(v)*r - Nrr*fabs(r)*r)) / (Iz - N_r_dot),
@@ -137,11 +146,12 @@ def usv_model():
 
     model.r_min = -1.0 # minimum angular velocity [rad/s]
     model.r_max = 1.0  # maximum angular velocity [rad/s]
+
     # input bounds
     model.Tstbddot_min = -30 # minimum throttle change rate
-    model.Tstbddot_max = 30  # maximum throttle change rate
+    model.Tstbddot_max = 30 # maximum throttle change rate
     model.Tportdot_min = -30 # minimum throttle change rate
-    model.Tportdot_max = 30  # maximum throttle change rate
+    model.Tportdot_max = 30 # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
@@ -151,7 +161,7 @@ def usv_model():
     #constraint.along_max = 4  # maximum lateral force [m/s^2]
 
     # Define initial conditions
-    model.x0 = np.array([0.001, 0, 0, 0, 0])
+    model.x0 = np.array([0.001, 00.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001])
 
     # define constraints struct
     #constraint.alat = Function("a_lat", [x, u], [a_lat])
