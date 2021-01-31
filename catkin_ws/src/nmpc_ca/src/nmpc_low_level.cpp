@@ -3,6 +3,7 @@
 #include <std_msgs/Float64.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Pose2D.h>
 
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
@@ -11,6 +12,7 @@
 #include <sstream>
 #include <fstream>
 #include <ios>
+#include <cmath>
 
 #include "acados/utils/print.h"
 #include "acados_c/ocp_nlp_interface.h"
@@ -21,8 +23,8 @@
 #include "blasfeo/include/blasfeo_d_aux.h"
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
-#include "usv_model_model/usv_model_model.h"
-#include "acados_solver_usv_model.h"
+#include "usv_model_low_level_model/usv_model_low_level_model.h"
+#include "acados_solver_usv_model_low_level.h"
 
 // global data
 ocp_nlp_in * nlp_in;
@@ -45,22 +47,22 @@ using std::showpos;
 // acados dims
 
 // Number of intervals in the horizon
-#define N 20
+#define N 100
 // Number of differential state variables
-#define NX 5
+#define NX 8
 // Number of control inputs
 #define NU 2
 // Number of measurements/references on nodes 0..N-1
-#define NY 7
+#define NY 10
 // Number of measurements/references on node N
-#define NYN 5
+#define NYN 8
 
 class NMPC
     {
     enum systemStates{
-        x_ = 0,
-        y_ = 1,
-        psi = 2,
+        psi = 0,
+        psisin = 1,
+        psicos = 2,
         u = 3,
         v = 4,
         r = 5,
@@ -88,13 +90,13 @@ class NMPC
     ros::Publisher right_thruster_pub;
     ros::Publisher left_thruster_pub;
     ros::Subscriber local_vel_sub;
-    ros::Subscriber local_pos_sub;
+    ros::Subscriber ins_pos_sub;
 
     unsigned int k,i,j,ii;
 
     // global variables
-    double x_des, y_des, psi_des, u_des, v_des, r_des;
-    double x_callback, y_callback, psi_callback, u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
+    double psi_des, psisin_des, psicos_des, u_des, v_des, r_des;
+    double psi_callback, psisin_callback, psicos_callback, u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
     std_msgs::Float64 right_thruster;
     std_msgs::Float64 left_thruster;
 
@@ -123,28 +125,31 @@ public:
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
-        local_pos_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::positionCallback, this);
+        ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 5, &NMPC::positionCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
 
         // Define references (to be changed to subscribers)
-        x_des = 2.0;
-        y_des = 0.0;
-        psi_des = 0.0;
+        psi_des = M_PI/4.0;
+        psisin_des = std::sin(psi_des);
+        psicos_des = std::cos(psi_des);
         u_des = 1.0;
-        v_des = 0;
-        r_des = 0;
+        v_des = 0.0;
+        r_des = 0.0;
 
         // Initialize state variables
         past_Tport = 0.0;
         past_Tstbd = 0.0;
         u_callback = 0.001;
+        psi_callback = 0.0;
+        psisin_callback = std::sin(psi_callback);
+        psicos_callback = std::cos(psi_callback);
 
         // Initialize the state (x0)
-        acados_in.x0[x_] = 0.0;
-        acados_in.x0[y_] = 0.0;
-        acados_in.x0[psi] = 0.0;
+        acados_in.x0[psi] = psi_callback;
+        acados_in.x0[psisin] = psisin_callback;
+        acados_in.x0[psicos] = psicos_callback;
         acados_in.x0[u] = u_callback;
         acados_in.x0[v] = 0.0;
         acados_in.x0[r] = 0.0;
@@ -168,15 +173,16 @@ public:
 
     void positionCallback(const geometry_msgs::Pose2D::ConstPtr& _pos)
     {
-        x_callback = _pos -> x;
-        y_callback = _pos -> y;
+        psi_callback = _pos->theta;
+        psisin_callback = std::sin(psi_callback);
+        psicos_callback = std::cos(psi_callback);
     }
 
     void control()
         {
-            acados_in.x0[x_] = x_callback;
-            acados_in.x0[y_] = y_callback;
             acados_in.x0[psi] = psi_callback;
+            acados_in.x0[psisin] = psisin_callback;
+            acados_in.x0[psicos] = psicos_callback;
             acados_in.x0[u] = u_callback;
             acados_in.x0[v] = v_callback;
             acados_in.x0[r] = r_callback;
@@ -187,25 +193,25 @@ public:
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", acados_in.x0);
 
-            acados_in.yref[0] = x_des;    // x
-            acados_in.yref[1] = y_des;    // y
-            acados_in.yref[2] = psi_des;  // psi
-            acados_in.yref[3] = u_des;    // u
-            acados_in.yref[4] = v_des;    // v
-            acados_in.yref[5] = r_des;    // r
-            acados_in.yref[6] = 0.00;     // Tport
-            acados_in.yref[7] = 0.00;     // Tstbd
-            acados_in.yref[8] = 0.00;     // UTportdot
-            acados_in.yref[9] = 0.00;     // UTstbddot
+            acados_in.yref[0] = psi_des;       // psi
+            acados_in.yref[1] = psisin_des;    // psisin
+            acados_in.yref[2] = psicos_des;    // psicos
+            acados_in.yref[3] = u_des;         // u
+            acados_in.yref[4] = v_des;         // v
+            acados_in.yref[5] = r_des;         // r
+            acados_in.yref[6] = 0.00;          // Tport
+            acados_in.yref[7] = 0.00;          // Tstbd
+            acados_in.yref[8] = 0.00;          // UTportdot
+            acados_in.yref[9] = 0.00;          // UTstbddot
 
-            acados_in.yref_e[0] = x_des;    // x
-            acados_in.yref_e[1] = y_des;    // y
-            acados_in.yref_e[2] = psi_des;  // psi
-            acados_in.yref_e[3] = u_des;    // u
-            acados_in.yref_e[4] = v_des;    // v
-            acados_in.yref_e[5] = r_des;    // r
-            acados_in.yref_e[6] = 0.00;     // Tport
-            acados_in.yref_e[7] = 0.00;     // Tstbd
+            acados_in.yref_e[0] = psi_des;       // psi
+            acados_in.yref_e[1] = psisin_des;    // psisin
+            acados_in.yref_e[2] = psicos_des;    // psicos
+            acados_in.yref_e[3] = u_des;         // u
+            acados_in.yref_e[4] = v_des;         // v
+            acados_in.yref_e[5] = r_des;         // r
+            acados_in.yref_e[6] = 0.00;          // Tport
+            acados_in.yref_e[7] = 0.00;          // Tstbd
 
             for (ii = 0; ii < N; ii++)
                 {
@@ -243,7 +249,7 @@ int main(int argc, char **argv)
 
     ros::NodeHandle n("~");
     NMPC nmpc(n);
-    ros::Rate loop_rate(20);
+    ros::Rate loop_rate(N);
 
     while(ros::ok()){
         nmpc.control();

@@ -8,9 +8,9 @@ project(nmpc_ca)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(
-	catkin REQUIRED COMPONENTS
-	std_msgs
-	tf
+    catkin REQUIRED COMPONENTS
+    std_msgs
+    tf
     roscpp
     rospy 
     std_msgs 
@@ -29,6 +29,7 @@ set(acados_include "${PROJECT_SOURCE_DIR}/acados/include")
 set(acados_lib "${PROJECT_SOURCE_DIR}/acados/lib")
 
 set(full_model_build ${PROJECT_SOURCE_DIR}/scripts/usv_acados/c_generated_code)
+set(full_model_low_level ${PROJECT_SOURCE_DIR}/scripts/usv_pf/c_generated_code)
 
 #generate_dynamic_reconfigure_options(
 #	config/crazyflie_params.cfg
@@ -44,6 +45,7 @@ set(full_model_build ${PROJECT_SOURCE_DIR}/scripts/usv_acados/c_generated_code)
 include_directories(
 	${catkin_INCLUDE_DIRS}
 	${full_model_build}
+	${full_model_low_level}
 	${acados_include}
 	${acados_include}/blasfeo/include/
 	${acados_include}/hpipm/include/
@@ -52,6 +54,7 @@ include_directories(
 )
 
 link_directories(${full_model_build})
+link_directories(${full_model_low_level})
 
 # NMPC node
 add_executable(acados_mpc src/acados_mpc.cpp)
@@ -63,9 +66,9 @@ target_link_libraries(acados_mpc
 )
 
 # NMPC pf node
-add_executable(acados_pf src/acados_pf.cpp)
-target_link_libraries(acados_pf
-	${full_model_build}/libacados_ocp_solver_usv_model.so
+add_executable(nmpc_low_level src/nmpc_low_level.cpp)
+target_link_libraries(nmpc_low_level
+	${full_model_low_level}/libacados_ocp_solver_usv_model_low_level.so
 	#${acados_lib}/libacados.a
 	${acados_lib}/libacados.so
 	${catkin_LIBRARIES}
