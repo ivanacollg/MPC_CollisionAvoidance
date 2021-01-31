@@ -97,7 +97,7 @@ def plotTrackProj(simX, T_opt=None):
         [xi2[i],yi2[i],_,_]=transformProj2Orig(Sref[k],nrefi+0.15,0,0)
         plt.plot([xi1[i],xi2[i]],[yi1[i],yi2[i]],color='black')
 '''
-def plotRes(simX,simU, simdis, t):
+def plotRes(simX,simU, simdis, simError, t):
     # plot results
     plt.figure()
     plt.subplot(6, 1, 1)
@@ -138,6 +138,21 @@ def plotRes(simX,simU, simdis, t):
     plt.xlabel('t')
     plt.legend(['psi'])
     plt.grid(True)
+
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.plot(t, simError[:,0])
+    plt.ylabel('rad')
+    plt.xlabel('t')
+    plt.legend(['psi_error'])
+    plt.grid(True)
+    plt.subplot(2, 1, 2)
+    plt.plot(t, simError[:,1])
+    plt.ylabel('m/s')
+    plt.xlabel('t')
+    plt.legend(['u_error'])
+    plt.grid(True)
+
 '''
 def plotalat(simX,simU,constraint,t):
     Nsim=t.shape[0]
