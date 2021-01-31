@@ -67,28 +67,37 @@ Nsim = int(T * N / Tf)
 simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
 simdis = np.ndarray((Nsim, 2))
+simError = np.ndarray((Nsim, 2))
+
 #s0 = model.x0[0]
 tcomp_sum = 0
 tcomp_max = 0
 
-sinpsi_ref = np.sin(np.pi/2)
-cospsi_ref = np.cos(np.pi/2)
-uref = 1.0
+psi_ref = np.pi/2
+sinpsi_ref = np.sin(psi_ref)
+cospsi_ref = np.cos(psi_ref)
+u_ref = 1.0
 
 x_pos = 0.0
 y_pos = 0.0
 x_vel_last = 0.0
 y_vel_last = 0.0
+psi_error = 0.0
+u_error = 0.0
+psi_mae = 0.0 # Mean Absolute Error 
+u_mae = 0.0 # Mean Absolute Error 
+psi_mse = 0.0 # Mean Square Error 
+u_mse = 0.0 # Mean Square Error 
 
 # simulate
 for i in range(Nsim):
     # update reference
-    #uref = 1.4 #u0 + #sref_N
+    #u_ref = 1.4 #u0 + #sref_N
     for j in range(N):
-        #yref = np.array([u0 + (uref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, sinpsi_ref, cospsi_ref, uref, 0, 0, 0, 0, 0, 0])
+        #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
+        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([0, sinpsi_ref, cospsi_ref, uref, 0, 0, 0, 0])
+    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 
@@ -109,6 +118,8 @@ for i in range(Nsim):
     # get solution
     x0 = acados_solver.get(0, "x")
     u0 = acados_solver.get(0, "u")
+
+    #Get values for grafic display
     x_vel = x0[3]*np.cos(x0[0])-x0[4]*np.sin(x0[0])
     y_vel = x0[3]*np.sin(x0[0])+x0[4]*np.cos(x0[0])
     x_pos = ((x_vel+x_vel_last)/2)*(Tf/N) + x_pos
@@ -117,10 +128,22 @@ for i in range(Nsim):
     y_vel_last = y_vel
     simdis[i,0] = x_pos
     simdis[i,1] = y_pos
+
     for j in range(nx):
         simX[i, j] = x0[j]
     for j in range(nu):
         simU[i, j] = u0[j]
+    
+    psi_error = x0[0] - psi_ref
+    u_error = x0[3] - u_ref
+    simError[i,0] = psi_error
+    simError[i,1] = u_error
+
+    if (i>400):
+        psi_mae += abs(psi_error)
+        u_mae += abs(u_error)
+        psi_mse += psi_error*psi_error
+        u_mse += u_error*u_error
 
     # update initial condition
     x0 = acados_solver.get(1, "x")
@@ -142,7 +165,7 @@ for i in range(Nsim):
 # Plot Results
 t = np.linspace(0.0, Nsim * Tf / N, Nsim)
 
-plotRes(simX, simU, simdis, t)
+plotRes(simX, simU, simdis, simError, t)
 #plotTrackProj(simX, track)
 #plotalat(simX, simU, constraint, t)
 
@@ -151,6 +174,12 @@ print("Average computation time: {}".format(tcomp_sum / Nsim))
 print("Maximum computation time: {}".format(tcomp_max))
 #print("Average speed:{}m/s".format(np.average(simX[:, 3])))
 print("Lap time: {}s".format(Tf * Nsim / N))
+
+print("Mean Absolute Error psi: {}".format(psi_mae/600))
+print("Mean Square Error psi: {}".format(psi_mse/600))
+print("Mean Absolute Error u: {}".format(u_mae/600))
+print("Mean Square Error u: {}".format(u_mse/600))
+
 # avoid plotting when running on Travis
 if os.environ.get("ACADOS_ON_TRAVIS") is None:
     plt.show()
