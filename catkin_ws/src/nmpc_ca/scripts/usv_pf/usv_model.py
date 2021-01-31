@@ -135,8 +135,8 @@ def usv_model():
     #a_long = Fxd / m
 
     # Model bounds
-    model.u_min = -1.5
-    model.u_max = 1.5
+    model.u_min = -2.0
+    model.u_max = 2.0
 
     # state bounds
     model.Tport_min = -30
@@ -144,8 +144,8 @@ def usv_model():
     model.Tport_max = 35
     model.Tstbd_max = 35
 
-    model.r_min = -1.0 # minimum angular velocity [rad/s]
-    model.r_max = 1.0  # maximum angular velocity [rad/s]
+    model.r_min = -10.0 # minimum angular velocity [rad/s]
+    model.r_max = 10.0  # maximum angular velocity [rad/s]
 
     # input bounds
     model.Tstbddot_min = -30 # minimum throttle change rate

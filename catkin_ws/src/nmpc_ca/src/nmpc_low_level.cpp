@@ -91,6 +91,8 @@ class NMPC
     ros::Publisher left_thruster_pub;
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
+    ros::Subscriber desired_speed_sub;
+    ros::Subscriber desired_heading_sub;
 
     unsigned int k,i,j,ii;
 
@@ -126,15 +128,17 @@ public:
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
         ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 5, &NMPC::positionCallback, this);
+        desired_speed_sub = n.subscribe("/guidance/desired_speed", 5, &NMPC::desiredSpeedCallback, this);
+        desired_heading_sub = n.subscribe("/guidance/desired_heading", 5, &NMPC::desiredHeadingCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
 
         // Define references (to be changed to subscribers)
-        psi_des = M_PI/4.0;
+        psi_des = 0.0;
         psisin_des = std::sin(psi_des);
         psicos_des = std::cos(psi_des);
-        u_des = 1.0;
+        u_des = 0.0;
         v_des = 0.0;
         r_des = 0.0;
 
@@ -176,6 +180,18 @@ public:
         psi_callback = _pos->theta;
         psisin_callback = std::sin(psi_callback);
         psicos_callback = std::cos(psi_callback);
+    }
+
+    void desiredSpeedCallback(const std_msgs::Float64::ConstPtr& _ud)
+    {
+        u_des = _ud -> data;
+    }
+
+    void desiredHeadingCallback(const std_msgs::Float64::ConstPtr& _psid)
+    {
+        psi_des = _psid -> data;
+        psisin_des = std::sin(psi_des);
+        psicos_des = std::cos(psi_des);
     }
 
     void control()
@@ -233,6 +249,11 @@ public:
 
             left_thruster.data =  acados_out.x1[Tport];
             right_thruster.data =  acados_out.x1[Tstbd];
+
+            if (u_des == 0.0){
+                left_thruster.data =  0.0;
+                right_thruster.data =  0.0;
+            }
 
             right_thruster_pub.publish(right_thruster);
             left_thruster_pub.publish(left_thruster);
