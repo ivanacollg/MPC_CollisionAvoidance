@@ -50,7 +50,7 @@ The simulation starts at s=-2m until one round is completed(s=8.71m). The beginn
 #[Sref, _, _, _, _] = getTrack(track)
 
 Tf = 1.0  # prediction horizon
-N = 100  # number of discretization steps
+N = 20  # number of discretization steps
 T = 10.00  # maximum simulation time[s]
 #sref_N = 3  # reference for final reference progress
 
@@ -66,19 +66,13 @@ Nsim = int(T * N / Tf)
 # initialize data structs
 simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
-simdis = np.ndarray((Nsim, 2))
 #s0 = model.x0[0]
 tcomp_sum = 0
 tcomp_max = 0
 
-sinpsi_ref = np.sin(np.pi/2)
-cospsi_ref = np.cos(np.pi/2)
+x_ref = 5
+y_ref = 1
 uref = 1.0
-
-x_pos = 0.0
-y_pos = 0.0
-x_vel_last = 0.0
-y_vel_last = 0.0
 
 # simulate
 for i in range(Nsim):
@@ -86,9 +80,9 @@ for i in range(Nsim):
     #uref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (uref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, sinpsi_ref, cospsi_ref, uref, 0, 0, 0, 0, 0, 0])
+        yref=np.array([x_ref, y_ref, 0, uref, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([0, sinpsi_ref, cospsi_ref, uref, 0, 0, 0, 0])
+    yref_N = np.array([x_ref, y_ref, 0, uref, 0, 0, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 
@@ -109,14 +103,6 @@ for i in range(Nsim):
     # get solution
     x0 = acados_solver.get(0, "x")
     u0 = acados_solver.get(0, "u")
-    x_vel = x0[3]*np.cos(x0[0])-x0[4]*np.sin(x0[0])
-    y_vel = x0[3]*np.sin(x0[0])+x0[4]*np.cos(x0[0])
-    x_pos = ((x_vel+x_vel_last)/2)*(Tf/N) + x_pos
-    y_pos = ((y_vel+y_vel_last)/2)*(Tf/N) + y_pos
-    x_vel_last = x_vel
-    y_vel_last = y_vel
-    simdis[i,0] = x_pos
-    simdis[i,1] = y_pos
     for j in range(nx):
         simX[i, j] = x0[j]
     for j in range(nu):
@@ -141,8 +127,7 @@ for i in range(Nsim):
 
 # Plot Results
 t = np.linspace(0.0, Nsim * Tf / N, Nsim)
-
-plotRes(simX, simU, simdis, t)
+plotRes(simX, simU, t)
 #plotTrackProj(simX, track)
 #plotalat(simX, simU, constraint, t)
 
