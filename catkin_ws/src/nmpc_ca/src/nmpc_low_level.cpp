@@ -89,6 +89,9 @@ class NMPC
     // publishers and subscribers
     ros::Publisher right_thruster_pub;
     ros::Publisher left_thruster_pub;
+    ros::Publisher speed_error_pub;
+    ros::Publisher heading_error_pub;
+    ros::Publisher control_input_pub;
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
     ros::Subscriber desired_speed_sub;
@@ -101,6 +104,9 @@ class NMPC
     double psi_callback, psisin_callback, psicos_callback, u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
     std_msgs::Float64 right_thruster;
     std_msgs::Float64 left_thruster;
+    std_msgs::Float64 eu;
+    std_msgs::Float64 epsi;
+    geometry_msgs::Pose2D ctrl_input;
 
     // acados struct
     solver_input acados_in;
@@ -124,6 +130,9 @@ public:
         // ROS Publishers 
         right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1);
         left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1);
+        speed_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/speed_error", 1);
+        heading_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/heading_error", 1);
+        control_input_pub = n.advertise<geometry_msgs::Pose2D>("/usv_control/controller/control_input", 1);
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
@@ -257,16 +266,30 @@ public:
 
             right_thruster_pub.publish(right_thruster);
             left_thruster_pub.publish(left_thruster);
-
             past_Tport = acados_out.x1[Tport];
             past_Tstbd = acados_out.x1[Tstbd];
+
+            float e_u = u_des - u_callback;
+            float e_psi = psi_des - psi_callback;
+
+            eu.data = e_u;
+            epsi.data = e_psi;
+
+            heading_error_pub.publish(epsi);
+            speed_error_pub.publish(eu);
+
+            double Tx = left_thruster.data + 0.78*right_thruster.data;
+            double Tz = (left_thruster.data - 0.78*right_thruster.data)*0.41/2;
+            ctrl_input.x = Tx;
+            ctrl_input.theta = Tz;
+            control_input_pub.publish(ctrl_input);
 
         }
     };
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "acados_mpc");
+    ros::init(argc, argv, "nmpc_low_level");
 
     ros::NodeHandle n("~");
     NMPC nmpc(n);
