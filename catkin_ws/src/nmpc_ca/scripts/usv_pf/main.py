@@ -35,6 +35,8 @@
 
 import time, os
 import numpy as np
+from random import random
+
 from acados_settings import *
 from plotFcn import *
 #from tracks.readDataFcn import getTrack
@@ -73,10 +75,10 @@ simError = np.ndarray((Nsim, 2))
 tcomp_sum = 0
 tcomp_max = 0
 
-psi_ref = np.pi/2
+psi_ref = 1.0#np.pi/2.0
 sinpsi_ref = np.sin(psi_ref)
 cospsi_ref = np.cos(psi_ref)
-u_ref = 1.0
+u_ref = 0.8
 
 x_pos = 0.0
 y_pos = 0.0
@@ -147,6 +149,10 @@ for i in range(Nsim):
 
     # update initial condition
     x0 = acados_solver.get(1, "x")
+    # Add noise
+    #x0[3] = x0[3] #+ random()#*0.0002
+    #x0[5] = x0[5] #+ random()#*0.0002
+
     acados_solver.set(0, "lbx", x0)
     acados_solver.set(0, "ubx", x0)
     #s0 = x0[0]
