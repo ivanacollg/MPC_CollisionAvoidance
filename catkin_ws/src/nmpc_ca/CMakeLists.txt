@@ -29,7 +29,7 @@ set(acados_include "${PROJECT_SOURCE_DIR}/acados/include")
 set(acados_lib "${PROJECT_SOURCE_DIR}/acados/lib")
 
 set(full_model_build ${PROJECT_SOURCE_DIR}/scripts/usv_acados/c_generated_code)
-set(full_model_low_level ${PROJECT_SOURCE_DIR}/scripts/usv_pf/c_generated_code)
+set(full_model_low_level ${PROJECT_SOURCE_DIR}/scripts/usv_low_level/c_generated_code)
 
 #generate_dynamic_reconfigure_options(
 #	config/crazyflie_params.cfg
