@@ -69,16 +69,22 @@ Nsim = int(T * N / Tf)
 simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
 simdis = np.ndarray((Nsim, 2))
-simError = np.ndarray((Nsim, 2))
+simError = np.ndarray((Nsim, 3))
 
 #s0 = model.x0[0]
 tcomp_sum = 0
 tcomp_max = 0
 
-psi_ref = 1.0#np.pi/2.0
+psi_ref = 0.0#np.pi/2.0
 sinpsi_ref = np.sin(psi_ref)
 cospsi_ref = np.cos(psi_ref)
-u_ref = 0.8
+u_ref = 0.1
+x1 = 0
+y1 = 0
+x2 = 3
+y2 = 3
+ak_ref = np.arctan2(y2-y1, x2-x1)
+ye_ref = 0.0
 
 x_pos = 0.0
 y_pos = 0.0
@@ -88,8 +94,10 @@ psi_error = 0.0
 u_error = 0.0
 psi_mae = 0.0 # Mean Absolute Error 
 u_mae = 0.0 # Mean Absolute Error 
+ye_mae = 0.0
 psi_mse = 0.0 # Mean Square Error 
 u_mse = 0.0 # Mean Square Error 
+ye_mse = 0.0
 
 # simulate
 for i in range(Nsim):
@@ -97,9 +105,9 @@ for i in range(Nsim):
     #u_ref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, 0, 0, 0, 0])
+        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, 0, 0])
+    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 
@@ -128,8 +136,8 @@ for i in range(Nsim):
     y_pos = ((y_vel+y_vel_last)/2)*(Tf/N) + y_pos
     x_vel_last = x_vel
     y_vel_last = y_vel
-    simdis[i,0] = x_pos
-    simdis[i,1] = y_pos
+    simdis[i,0] = x0[10]#x_pos
+    simdis[i,1] = x0[11]#y_pos
 
     for j in range(nx):
         simX[i, j] = x0[j]
@@ -138,14 +146,19 @@ for i in range(Nsim):
     
     psi_error = x0[0] - psi_ref
     u_error = x0[3] - u_ref
+    ye_error = x0[6] - ye_ref
     simError[i,0] = psi_error
     simError[i,1] = u_error
+    simError[i,2] = ye_error
 
     if (i>400):
         psi_mae += abs(psi_error)
         u_mae += abs(u_error)
+        ye_mae += abs(ye_error)
         psi_mse += psi_error*psi_error
         u_mse += u_error*u_error
+        ye_mse += ye_error*ye_error
+
 
     # update initial condition
     x0 = acados_solver.get(1, "x")
@@ -185,6 +198,8 @@ print("Mean Absolute Error psi: {}".format(psi_mae/600))
 print("Mean Square Error psi: {}".format(psi_mse/600))
 print("Mean Absolute Error u: {}".format(u_mae/600))
 print("Mean Square Error u: {}".format(u_mse/600))
+print("Mean Absolute Error ye: {}".format(ye_mae/600))
+print("Mean Square Error ye: {}".format(ye_mse/600))
 
 # avoid plotting when running on Travis
 if os.environ.get("ACADOS_ON_TRAVIS") is None:

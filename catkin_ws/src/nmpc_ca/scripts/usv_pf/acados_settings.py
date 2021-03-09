@@ -72,13 +72,13 @@ def acados_settings(Tf, N):
     #nsh = 2
 
     # set cos
-    Q = np.diag([0, 0.1, 0.1, 0.1, 0, 0.000000, 0.0000001, 0.0000000])
-    
-    R = np.eye(nu)
-    R[0, 0] = 0.0000000
-    R[1, 1] = 0.0000000
-    
-    Qe = np.diag([ 0, 0.05, 0.05, 0.1, 0, 0.0000000, 0.000001, 0.0000000])
+    #Q = np.diag([0, 0.1, 0.1, 0.1, 0, 0.000000, 0.0000001, 0.0000000])
+    #
+    #R = np.eye(nu)
+    #R[0, 0] = 0.0000000
+    #R[1, 1] = 0.0000000
+    #
+    #Qe = np.diag([ 0, 0.05, 0.05, 0.1, 0, 0.0000000, 0.000001, 0.0000000])
 
     #Q = np.diag([0, 1e6, 1e6, 1e7, 0.0, 0, 0.5e1, 0.0e1])
     #
@@ -87,6 +87,14 @@ def acados_settings(Tf, N):
     #R[1, 1] = 1e3
     #
     #Qe = np.diag([ 0, 5e7, 5e7, 5e7, 0, 0, 0.5e1, 0.0e1])
+
+    Q = np.diag([0, 0, 0, 0.1, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0])
+    
+    R = np.eye(nu)
+    R[0, 0] = 0
+    R[1, 1] = 0
+    
+    Qe = np.diag([0, 0, 0, 0.5, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0])
 
 
     ocp.cost.cost_type = "LINEAR_LS"
@@ -117,8 +125,8 @@ def acados_settings(Tf, N):
     ocp.cost.Zu = 0 * np.ones((ns,))'''
 
     # set intial references
-    ocp.cost.yref = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0])
-    ocp.cost.yref_e = np.array([0, 0, 1, 0, 0, 0, 0, 0])
+    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     # setting constraints
     ocp.constraints.lbx = np.array([model.u_min, model.u_min, model.r_min, model.Tport_min, model.Tstbd_min])
