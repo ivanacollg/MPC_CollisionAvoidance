@@ -68,22 +68,21 @@ Nsim = int(T * N / Tf)
 # initialize data structs
 simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
-simdis = np.ndarray((Nsim, 2))
 simError = np.ndarray((Nsim, 3))
 
 #s0 = model.x0[0]
 tcomp_sum = 0
 tcomp_max = 0
 
-psi_ref = 0.0#np.pi/2.0
-sinpsi_ref = np.sin(psi_ref)
-cospsi_ref = np.cos(psi_ref)
-u_ref = 0.1
-x1 = 0
-y1 = 0
-x2 = 3
-y2 = 3
+
+u_ref = 0.5
+x1 = 1.0
+y1 = -1.0
+x2 = 1.0
+y2 = 3.8
 ak_ref = np.arctan2(y2-y1, x2-x1)
+sinpsi_ref = np.sin(ak_ref)
+cospsi_ref = np.cos(ak_ref)
 ye_ref = 0.0
 
 x_pos = 0.0
@@ -98,6 +97,22 @@ ye_mae = 0.0
 psi_mse = 0.0 # Mean Square Error 
 u_mse = 0.0 # Mean Square Error 
 ye_mse = 0.0
+
+
+
+starting_angle = 0.00
+x1 = 1.0
+y1 = -1.0
+x2 = 1.0
+y2 = 3.8
+ak = np.math.atan2(y2-y1, x2-x1)
+nedx = 0
+nedy = 0
+ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
+x_start = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+
+acados_solver.set(0, "lbx", x_start)
+acados_solver.set(0, "ubx", x_start)
 
 # simulate
 for i in range(Nsim):
@@ -129,22 +144,13 @@ for i in range(Nsim):
     x0 = acados_solver.get(0, "x")
     u0 = acados_solver.get(0, "u")
 
-    #Get values for grafic display
-    x_vel = x0[3]*np.cos(x0[0])-x0[4]*np.sin(x0[0])
-    y_vel = x0[3]*np.sin(x0[0])+x0[4]*np.cos(x0[0])
-    x_pos = ((x_vel+x_vel_last)/2)*(Tf/N) + x_pos
-    y_pos = ((y_vel+y_vel_last)/2)*(Tf/N) + y_pos
-    x_vel_last = x_vel
-    y_vel_last = y_vel
-    simdis[i,0] = x0[10]#x_pos
-    simdis[i,1] = x0[11]#y_pos
 
     for j in range(nx):
         simX[i, j] = x0[j]
     for j in range(nu):
         simU[i, j] = u0[j]
     
-    psi_error = x0[0] - psi_ref
+    psi_error = x0[0] - ak_ref
     u_error = x0[3] - u_ref
     ye_error = x0[6] - ye_ref
     simError[i,0] = psi_error
@@ -184,7 +190,7 @@ for i in range(Nsim):
 # Plot Results
 t = np.linspace(0.0, Nsim * Tf / N, Nsim)
 
-plotRes(simX, simU, simdis, simError, t)
+plotRes(simX, simU, simError, t)
 #plotTrackProj(simX, track)
 #plotalat(simX, simU, constraint, t)
 
@@ -194,7 +200,7 @@ print("Maximum computation time: {}".format(tcomp_max))
 #print("Average speed:{}m/s".format(np.average(simX[:, 3])))
 print("Lap time: {}s".format(Tf * Nsim / N))
 
-print("Mean Absolute Error psi: {}".format(psi_mae/600))
+#print("Mean Absolute Error psi: {}".format(psi_mae/600))
 print("Mean Square Error psi: {}".format(psi_mse/600))
 print("Mean Absolute Error u: {}".format(u_mae/600))
 print("Mean Square Error u: {}".format(u_mse/600))

@@ -138,7 +138,7 @@ def usv_model():
       (Tu - (-m + 2 * Y_v_dot)*v - (Y_r_dot + N_v_dot)*r*r - (-Xu*u - Xuu*fabs(u)*u)) / (m - X_u_dot),
       (-(m - X_u_dot)*u*r - (- Yv - Yvv*fabs(v) - Yvr*fabs(r))*v) / (m - Y_v_dot),
       (Tr - (-2*Y_v_dot*u*v - (Y_r_dot + N_v_dot)*r*u + X_u_dot*u*r) - (-Nr*r - Nrv*fabs(v)*r - Nrr*fabs(r)*r)) / (Iz - N_r_dot),
-      (u*sin(psi) + v*cos(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
+      -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
       0,
       0,
       0,
@@ -153,7 +153,7 @@ def usv_model():
     #a_long = Fxd / m
 
     # Model bounds
-    model.u_min = -2.0
+    model.u_min = -1.0
     model.u_max = 2.0
 
     # state bounds
@@ -180,10 +180,10 @@ def usv_model():
 
     # Define initial conditions
     starting_angle = 0.00
-    x1 = 0
-    y1 = 0
-    x2 = 3
-    y2 = 3
+    x1 = 1.0
+    y1 = -1.0
+    x2 = 1.0
+    y2 = 3.8
     ak = np.arctan2(y2-y1, x2-x1)
     ye = 0.0
     nedx = 0

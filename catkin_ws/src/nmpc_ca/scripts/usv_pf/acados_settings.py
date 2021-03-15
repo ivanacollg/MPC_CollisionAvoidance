@@ -88,13 +88,13 @@ def acados_settings(Tf, N):
     #
     #Qe = np.diag([ 0, 5e7, 5e7, 5e7, 0, 0, 0.5e1, 0.0e1])
 
-    Q = np.diag([0, 0, 0, 0.1, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0])
+    Q = np.diag([0, 0.3, 0.3, 0.8, 0, 0, 0.8, 0, 0, 0, 0, 0, 0, 0])
     
     R = np.eye(nu)
     R[0, 0] = 0
     R[1, 1] = 0
     
-    Qe = np.diag([0, 0, 0, 0.5, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0])
+    Qe = np.diag([0, 0.5, 0.5, 1.0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0])
 
 
     ocp.cost.cost_type = "LINEAR_LS"
@@ -131,7 +131,7 @@ def acados_settings(Tf, N):
     # setting constraints
     ocp.constraints.lbx = np.array([model.u_min, model.u_min, model.r_min, model.Tport_min, model.Tstbd_min])
     ocp.constraints.ubx = np.array([model.u_max, model.u_max, model.r_max, model.Tport_max, model.Tstbd_max])
-    ocp.constraints.idxbx = np.array([3,4,5,6,7])
+    ocp.constraints.idxbx = np.array([3,4,5,12,13])
     ocp.constraints.lbu = np.array([model.Tportdot_min, model.Tstbddot_min])
     ocp.constraints.ubu = np.array([model.Tportdot_max, model.Tstbddot_max])
     ocp.constraints.idxbu = np.array([0, 1])
