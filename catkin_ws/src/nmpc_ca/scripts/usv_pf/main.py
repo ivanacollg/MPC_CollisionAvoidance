@@ -90,10 +90,10 @@ ye_mse = 0.0
 
 #Start values
 starting_angle = 0.00
-x1 = -0.0
-y1 = -1.0
-x2 = 5.0
-y2 = 4.0
+x1 = 2.0
+y1 = 2.0
+x2 = 6.0
+y2 = -15.0
 ak = np.math.atan2(y2-y1, x2-x1)
 nedx = 0
 nedy = 0

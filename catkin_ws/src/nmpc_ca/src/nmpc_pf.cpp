@@ -99,7 +99,6 @@ class NMPC
     ros::Publisher speed_error_pub;
     ros::Publisher cross_track_error_pub;
     ros::Publisher control_input_pub;
-    ros::Publisher target_pub;
     ros::Publisher desired_speed_pub;
 
     ros::Subscriber local_vel_sub;
@@ -118,7 +117,6 @@ class NMPC
     std_msgs::Float64 eye;
     std_msgs::Float64 d_speed;
     geometry_msgs::Pose2D ctrl_input;
-    geometry_msgs::Pose2D waypoint_path;
 
     // acados struct
     solver_input acados_in;
@@ -127,6 +125,8 @@ class NMPC
 
 public:
 
+    ros::Publisher target_pub;
+    geometry_msgs::Pose2D waypoint_path;
     std::vector<double> waypoints;
     std::vector<double> last_waypoints;
     int k;
@@ -239,26 +239,33 @@ public:
             double x_squared = pow(x2 - nedx_callback, 2);
             double y_squared = pow(y2 - nedy_callback, 2);
             double distance = pow(x_squared + y_squared, 0.5);
-
+            std::cout<<"Distance:"<<distance<<".\n";
+            d_speed.data = 1.0;
+            u_des = 1.0;
             if (distance > 1)
             {
                 double ak = atan2(y2-y1, x2-x1);
+                psisin_des = std::sin(ak);
+                psicos_des = std::cos(ak);
                 double ye = -(nedx_callback-x1)*sin(ak) 
                             + (nedy_callback-y1)*cos(ak);
                 control(x1, y1, ak, ye);
             }
             else
             {
-                ROS_ERROR("Next waypoint");
+                std::cout<<"Next waypoint";
                 k += 1;
             }
-            d_speed.data = 0.5;
-            u_des = 0.5;
         }
         else
         {
             d_speed.data = 0.0;
             u_des = 0.0;
+            left_thruster.data =  0.0;
+            right_thruster.data =  0.0;
+            right_thruster_pub.publish(right_thruster);
+            left_thruster_pub.publish(left_thruster);
+            desired_speed_pub.publish(d_speed);
         }
     }
 
@@ -285,7 +292,7 @@ public:
 
             ye_des = 0.00;
 
-            acados_in.yref[0] = ak_des;       // psi
+            acados_in.yref[0] = 0.00;       // psi
             acados_in.yref[1] = psisin_des;    // psisin
             acados_in.yref[2] = psicos_des;    // psicos
             acados_in.yref[3] = u_des;         // u
@@ -294,7 +301,7 @@ public:
             acados_in.yref[6] = ye_des;         // ye
             acados_in.yref[7] = 0.00;         // x1
             acados_in.yref[8] = 0.00;         // x2
-            acados_in.yref[9] = ak_des;         // ak
+            acados_in.yref[9] = 0.00;         // ak
             acados_in.yref[10] = 0.00;         // nedx
             acados_in.yref[11] = 0.00;         // nedy
             acados_in.yref[12] = 0.00;          // Tport
@@ -302,7 +309,7 @@ public:
             acados_in.yref[14] = 0.00;          // UTportdot
             acados_in.yref[15] = 0.00;          // UTstbddot
 
-            acados_in.yref_e[0] = ak_des;       // psi
+            acados_in.yref_e[0] = 0.00;       // psi
             acados_in.yref_e[1] = psisin_des;    // psisin
             acados_in.yref_e[2] = psicos_des;    // psicos
             acados_in.yref_e[3] = u_des;         // u
@@ -311,7 +318,7 @@ public:
             acados_in.yref_e[6] = ye_des;         // ye
             acados_in.yref_e[7] = 0.00;         // x1
             acados_in.yref_e[8] = 0.00;         // x2
-            acados_in.yref_e[9] = ak_des;         // ak
+            acados_in.yref_e[9] = 0.00;         // ak
             acados_in.yref_e[10] = 0.00;         // nedx
             acados_in.yref_e[11] = 0.00;         // nedy
             acados_in.yref_e[12] = 0.00;          // Tport
@@ -381,7 +388,12 @@ int main(int argc, char **argv)
         if(nmpc.last_waypoints != nmpc.waypoints)
         {
             nmpc.k = 1;
-            nmpc.last_waypoints = nmpc.waypoints;   
+            nmpc.last_waypoints = nmpc.waypoints;
+            double x1 = nmpc.last_waypoints[0];
+            double y1 = nmpc.last_waypoints[1];
+            nmpc.waypoint_path.x = x1;
+            nmpc.waypoint_path.y = y1;
+            nmpc.target_pub.publish(nmpc.waypoint_path);
         }
         
         nmpc.waypoint_manager();
