@@ -53,7 +53,7 @@ The simulation starts at s=-2m until one round is completed(s=8.71m). The beginn
 
 Tf = 1.0  # prediction horizon
 N = 100  # number of discretization steps
-T = 10.00  # maximum simulation time[s]
+T = 20.00  # maximum simulation time[s]
 #sref_N = 3  # reference for final reference progress
 
 # load model
@@ -74,17 +74,6 @@ simError = np.ndarray((Nsim, 3))
 tcomp_sum = 0
 tcomp_max = 0
 
-
-u_ref = 0.5
-x1 = 1.0
-y1 = -1.0
-x2 = 1.0
-y2 = 3.8
-ak_ref = np.arctan2(y2-y1, x2-x1)
-sinpsi_ref = np.sin(ak_ref)
-cospsi_ref = np.cos(ak_ref)
-ye_ref = 0.0
-
 x_pos = 0.0
 y_pos = 0.0
 x_vel_last = 0.0
@@ -99,12 +88,12 @@ u_mse = 0.0 # Mean Square Error
 ye_mse = 0.0
 
 
-
+#Start values
 starting_angle = 0.00
-x1 = 1.0
+x1 = -0.0
 y1 = -1.0
-x2 = 1.0
-y2 = 3.8
+x2 = 5.0
+y2 = 4.0
 ak = np.math.atan2(y2-y1, x2-x1)
 nedx = 0
 nedy = 0
@@ -113,6 +102,13 @@ x_start = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angl
 
 acados_solver.set(0, "lbx", x_start)
 acados_solver.set(0, "ubx", x_start)
+
+#References
+u_ref = 0.5
+ak_ref = ak
+sinpsi_ref = np.sin(ak_ref)
+cospsi_ref = np.cos(ak_ref)
+ye_ref = 0.0
 
 # simulate
 for i in range(Nsim):
@@ -206,6 +202,7 @@ print("Mean Absolute Error u: {}".format(u_mae/600))
 print("Mean Square Error u: {}".format(u_mse/600))
 print("Mean Absolute Error ye: {}".format(ye_mae/600))
 print("Mean Square Error ye: {}".format(ye_mse/600))
+
 
 # avoid plotting when running on Travis
 if os.environ.get("ACADOS_ON_TRAVIS") is None:

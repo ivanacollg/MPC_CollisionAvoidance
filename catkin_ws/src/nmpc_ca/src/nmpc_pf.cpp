@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <std_msgs/UInt8.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Pose2D.h>
@@ -49,13 +50,13 @@ using std::showpos;
 // Number of intervals in the horizon
 #define N 100
 // Number of differential state variables
-#define NX 8
+#define NX 14
 // Number of control inputs
 #define NU 2
 // Number of measurements/references on nodes 0..N-1
-#define NY 10
+#define NY 16
 // Number of measurements/references on node N
-#define NYN 8
+#define NYN 14
 
 class NMPC
     {
@@ -66,8 +67,14 @@ class NMPC
         u = 3,
         v = 4,
         r = 5,
-        Tport = 6,
-        Tstbd = 7
+        ye = 6,
+        x1 = 7,
+        y1 = 8, 
+        ak = 9,
+        nedx = 10,
+        nedy = 11,
+        Tport = 12,
+        Tstbd = 13
     };
 
     enum controlInputs{
@@ -90,23 +97,28 @@ class NMPC
     ros::Publisher right_thruster_pub;
     ros::Publisher left_thruster_pub;
     ros::Publisher speed_error_pub;
-    ros::Publisher heading_error_pub;
+    ros::Publisher cross_track_error_pub;
     ros::Publisher control_input_pub;
+    ros::Publisher target_pub;
+    ros::Publisher desired_speed_pub;
+
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
-    ros::Subscriber desired_speed_sub;
-    ros::Subscriber desired_heading_sub;
+    ros::Subscriber waypoints_sub;
 
-    unsigned int k,i,j,ii;
+    unsigned int i,j,ii;
 
     // global variables
-    double psi_des, psisin_des, psicos_des, u_des, v_des, r_des;
+    double ak_des, psisin_des, psicos_des, u_des, v_des, r_des, ye_des;
     double psi_callback, psisin_callback, psicos_callback, u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
+    double nedx_callback, nedy_callback;
     std_msgs::Float64 right_thruster;
     std_msgs::Float64 left_thruster;
     std_msgs::Float64 eu;
-    std_msgs::Float64 epsi;
+    std_msgs::Float64 eye;
+    std_msgs::Float64 d_speed;
     geometry_msgs::Pose2D ctrl_input;
+    geometry_msgs::Pose2D waypoint_path;
 
     // acados struct
     solver_input acados_in;
@@ -115,8 +127,12 @@ class NMPC
 
 public:
 
+    std::vector<double> waypoints;
+    std::vector<double> last_waypoints;
+    int k;
+
     NMPC(ros::NodeHandle& n)
-        {
+    {
 
         int status = 0;
 
@@ -131,22 +147,23 @@ public:
         right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1);
         left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1);
         speed_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/speed_error", 1);
-        heading_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/heading_error", 1);
+        cross_track_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/cross_track_error", 1);
         control_input_pub = n.advertise<geometry_msgs::Pose2D>("/usv_control/controller/control_input", 1);
+        target_pub = n.advertise<geometry_msgs::Pose2D>("/guidance/target", 1);
+        desired_speed_pub = n.advertise<std_msgs::Float64>("/guidance/desired_speed", 1);
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
         ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 5, &NMPC::positionCallback, this);
-        desired_speed_sub = n.subscribe("/guidance/desired_speed", 5, &NMPC::desiredSpeedCallback, this);
-        desired_heading_sub = n.subscribe("/guidance/desired_heading", 5, &NMPC::desiredHeadingCallback, this);
+        waypoints_sub = n.subscribe("/mission/waypoints", 5, &NMPC::waypointsCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
 
         // Define references (to be changed to subscribers)
-        psi_des = 0.0;
-        psisin_des = std::sin(psi_des);
-        psicos_des = std::cos(psi_des);
+        ak_des = 0.0;
+        psisin_des = std::sin(ak_des);
+        psicos_des = std::cos(ak_des);
         u_des = 0.0;
         v_des = 0.0;
         r_des = 0.0;
@@ -168,11 +185,15 @@ public:
         acados_in.x0[r] = 0.0;
         acados_in.x0[Tport] = past_Tport;
         acados_in.x0[Tstbd] = past_Tstbd;
-        }
+
+        waypoints.clear();
+        last_waypoints.clear();
+    }
+   
     void nmpcReset()
-        {
+    {
         acados_free();
-        }
+    }
 
     void velocityCallback(const geometry_msgs::Vector3::ConstPtr& _vel)
     {
@@ -186,24 +207,62 @@ public:
 
     void positionCallback(const geometry_msgs::Pose2D::ConstPtr& _pos)
     {
+        nedx_callback = _pos->x;
+        nedy_callback = _pos->y;
         psi_callback = _pos->theta;
         psisin_callback = std::sin(psi_callback);
         psicos_callback = std::cos(psi_callback);
     }
 
-    void desiredSpeedCallback(const std_msgs::Float64::ConstPtr& _ud)
+    void waypointsCallback(const std_msgs::Float32MultiArray::ConstPtr& _msg)
     {
-        u_des = _ud -> data;
+        waypoints.clear();
+        int leng = _msg ->layout.data_offset;
+
+        for (i=0; i<(leng-1); i++)
+        {
+            waypoints.push_back(_msg -> data[i]);
+        }
     }
 
-    void desiredHeadingCallback(const std_msgs::Float64::ConstPtr& _psid)
+    void waypoint_manager()
     {
-        psi_des = _psid -> data;
-        psisin_des = std::sin(psi_des);
-        psicos_des = std::cos(psi_des);
+        if (k < (last_waypoints.size())/2)
+        {
+            double x1 = last_waypoints[2*k - 2];
+            double y1 = last_waypoints[2*k - 1];
+            double x2 = last_waypoints[2*k];
+            double y2 = last_waypoints[2*k + 1];
+            waypoint_path.x = x2;
+            waypoint_path.y = y2;
+            target_pub.publish(waypoint_path);
+            double x_squared = pow(x2 - nedx_callback, 2);
+            double y_squared = pow(y2 - nedy_callback, 2);
+            double distance = pow(x_squared + y_squared, 0.5);
+
+            if (distance > 1)
+            {
+                double ak = atan2(y2-y1, x2-x1);
+                double ye = -(nedx_callback-x1)*sin(ak) 
+                            + (nedy_callback-y1)*cos(ak);
+                control(x1, y1, ak, ye);
+            }
+            else
+            {
+                ROS_ERROR("Next waypoint");
+                k += 1;
+            }
+            d_speed.data = 0.5;
+            u_des = 0.5;
+        }
+        else
+        {
+            d_speed.data = 0.0;
+            u_des = 0.0;
+        }
     }
 
-    void control()
+    void control(double _x1, double _y1, double _ak, double _ye)
         {
             acados_in.x0[psi] = psi_callback;
             acados_in.x0[psisin] = psisin_callback;
@@ -211,6 +270,12 @@ public:
             acados_in.x0[u] = u_callback;
             acados_in.x0[v] = v_callback;
             acados_in.x0[r] = r_callback;
+            acados_in.x0[ye] = _ye;
+            acados_in.x0[x1] = _x1;
+            acados_in.x0[y1] = _y1;
+            acados_in.x0[ak] = _ak;
+            acados_in.x0[nedx] = nedx_callback;
+            acados_in.x0[nedy] = nedy_callback;
             acados_in.x0[Tport] = past_Tport;
             acados_in.x0[Tstbd] = past_Tstbd;
             
@@ -218,25 +283,39 @@ public:
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", acados_in.x0);
 
-            acados_in.yref[0] = psi_des;       // psi
+            ye_des = 0.00;
+
+            acados_in.yref[0] = ak_des;       // psi
             acados_in.yref[1] = psisin_des;    // psisin
             acados_in.yref[2] = psicos_des;    // psicos
             acados_in.yref[3] = u_des;         // u
             acados_in.yref[4] = v_des;         // v
             acados_in.yref[5] = r_des;         // r
-            acados_in.yref[6] = 0.00;          // Tport
-            acados_in.yref[7] = 0.00;          // Tstbd
-            acados_in.yref[8] = 0.00;          // UTportdot
-            acados_in.yref[9] = 0.00;          // UTstbddot
+            acados_in.yref[6] = ye_des;         // ye
+            acados_in.yref[7] = 0.00;         // x1
+            acados_in.yref[8] = 0.00;         // x2
+            acados_in.yref[9] = ak_des;         // ak
+            acados_in.yref[10] = 0.00;         // nedx
+            acados_in.yref[11] = 0.00;         // nedy
+            acados_in.yref[12] = 0.00;          // Tport
+            acados_in.yref[13] = 0.00;          // Tstbd
+            acados_in.yref[14] = 0.00;          // UTportdot
+            acados_in.yref[15] = 0.00;          // UTstbddot
 
-            acados_in.yref_e[0] = psi_des;       // psi
+            acados_in.yref_e[0] = ak_des;       // psi
             acados_in.yref_e[1] = psisin_des;    // psisin
             acados_in.yref_e[2] = psicos_des;    // psicos
             acados_in.yref_e[3] = u_des;         // u
             acados_in.yref_e[4] = v_des;         // v
             acados_in.yref_e[5] = r_des;         // r
-            acados_in.yref_e[6] = 0.00;          // Tport
-            acados_in.yref_e[7] = 0.00;          // Tstbd
+            acados_in.yref_e[6] = ye_des;         // ye
+            acados_in.yref_e[7] = 0.00;         // x1
+            acados_in.yref_e[8] = 0.00;         // x2
+            acados_in.yref_e[9] = ak_des;         // ak
+            acados_in.yref_e[10] = 0.00;         // nedx
+            acados_in.yref_e[11] = 0.00;         // nedy
+            acados_in.yref_e[12] = 0.00;          // Tport
+            acados_in.yref_e[13] = 0.00;          // Tstbd
 
             for (ii = 0; ii < N; ii++)
                 {
@@ -270,21 +349,23 @@ public:
             past_Tstbd = acados_out.x1[Tstbd];
 
             float e_u = u_des - u_callback;
-            float e_psi = psi_des - psi_callback;
+            float e_ye = ye_des - _ye;
 
             eu.data = e_u;
-            epsi.data = e_psi;
+            eye.data = e_ye;
 
-            heading_error_pub.publish(epsi);
+            cross_track_error_pub.publish(eye);
             speed_error_pub.publish(eu);
+            desired_speed_pub.publish(d_speed);
 
             double Tx = left_thruster.data + 0.78*right_thruster.data;
             double Tz = (left_thruster.data - 0.78*right_thruster.data)*0.41/2;
             ctrl_input.x = Tx;
             ctrl_input.theta = Tz;
             control_input_pub.publish(ctrl_input);
-
         }
+
+
     };
 
 int main(int argc, char **argv)
@@ -294,9 +375,17 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     NMPC nmpc(n);
     ros::Rate loop_rate(N);
+    nmpc.last_waypoints.clear();
 
     while(ros::ok()){
-        nmpc.control();
+        if(nmpc.last_waypoints != nmpc.waypoints)
+        {
+            nmpc.k = 1;
+            nmpc.last_waypoints = nmpc.waypoints;   
+        }
+        
+        nmpc.waypoint_manager();
+
         ros::spinOnce();
         loop_rate.sleep();
     }

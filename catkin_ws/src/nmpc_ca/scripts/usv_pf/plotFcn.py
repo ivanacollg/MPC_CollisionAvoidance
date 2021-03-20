@@ -99,7 +99,7 @@ def plotTrackProj(simX, T_opt=None):
 '''
 def plotRes(simX,simU, simError, t):
     # plot results
-    plt.figure()
+    plt.figure(1)
     plt.subplot(5, 1, 1)
     plt.step(t, simU[:,0], color='r')
     plt.step(t, simU[:,1], color='g')
@@ -133,14 +133,14 @@ def plotRes(simX,simU, simError, t):
     plt.legend(['psi'])
     plt.grid(True)
 
-    plt.figure()
+    plt.figure(2)
     plt.subplot(1, 1, 1)
     plt.plot(simX[:,11:12], simX[:,10:11]) 
     plt.ylabel('x')
     plt.xlabel('y')
     plt.legend(['trayectoria'])
 
-    plt.figure()
+    plt.figure(3)
     #plt.subplot(2, 1, 1)
     #plt.plot(t, simError[:,0])
     #plt.ylabel('rad')
@@ -159,6 +159,8 @@ def plotRes(simX,simU, simError, t):
     plt.xlabel('t')
     plt.legend(['ye_error'])
     plt.grid(True)
+
+
 '''
 def plotalat(simX,simU,constraint,t):
     Nsim=t.shape[0]

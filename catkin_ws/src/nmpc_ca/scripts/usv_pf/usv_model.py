@@ -153,7 +153,7 @@ def usv_model():
     #a_long = Fxd / m
 
     # Model bounds
-    model.u_min = -1.0
+    model.u_min = -2.0
     model.u_max = 2.0
 
     # state bounds
