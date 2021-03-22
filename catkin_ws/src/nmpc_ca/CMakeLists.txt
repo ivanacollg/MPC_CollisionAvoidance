@@ -32,6 +32,8 @@ set(full_model_build ${PROJECT_SOURCE_DIR}/scripts/usv_acados/c_generated_code)
 set(full_model_low_level ${PROJECT_SOURCE_DIR}/scripts/usv_low_level/c_generated_code)
 set(full_model_pf ${PROJECT_SOURCE_DIR}/scripts/usv_pf/c_generated_code)
 set(full_model_guidance ${PROJECT_SOURCE_DIR}/scripts/usv_guidance/c_generated_code)
+set(full_model_guidance2 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance2/c_generated_code)
+
 
 #generate_dynamic_reconfigure_options(
 #	config/crazyflie_params.cfg
@@ -50,6 +52,7 @@ include_directories(
 	${full_model_low_level}
 	${full_model_pf}
 	${full_model_guidance}
+	${full_model_guidance2}
 	${acados_include}
 	${acados_include}/blasfeo/include/
 	${acados_include}/hpipm/include/
@@ -61,6 +64,7 @@ link_directories(${full_model_build})
 link_directories(${full_model_low_level})
 link_directories(${full_model_pf})
 link_directories(${full_model_guidance})
+link_directories(${full_model_guidance2})
 
 # NMPC node
 add_executable(acados_mpc src/acados_mpc.cpp)
@@ -97,6 +101,15 @@ target_link_libraries(nmpc_guidance
 	${acados_lib}/libacados.so
 	${catkin_LIBRARIES}
 )
+
+add_executable(nmpc_guidance2 src/nmpc_guidance2.cpp)
+target_link_libraries(nmpc_guidance2
+	${full_model_guidance2}/libacados_ocp_solver_usv_model_guidance2.so
+	#${acados_lib}/libacados.a
+	${acados_lib}/libacados.so
+	${catkin_LIBRARIES}
+)
+
 
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencfg)
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencpp)

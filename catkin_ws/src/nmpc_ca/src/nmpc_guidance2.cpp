@@ -24,8 +24,8 @@
 #include "blasfeo/include/blasfeo_d_aux.h"
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
-#include "usv_model_guidance_model/usv_model_guidance_model.h"
-#include "acados_solver_usv_model_guidance.h"
+#include "usv_model_guidance2_model/usv_model_guidance2_model.h"
+#include "acados_solver_usv_model_guidance2.h"
 
 // global data
 ocp_nlp_in * nlp_in;
