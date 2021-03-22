@@ -71,30 +71,13 @@ def acados_settings(Tf, N):
     #ns = 2
     #nsh = 2
 
-    # set cos
-    #Q = np.diag([0, 0.1, 0.1, 0.1, 0, 0.000000, 0.0000001, 0.0000000])
-    #
-    #R = np.eye(nu)
-    #R[0, 0] = 0.0000000
-    #R[1, 1] = 0.0000000
-    #
-    #Qe = np.diag([ 0, 0.05, 0.05, 0.1, 0, 0.0000000, 0.000001, 0.0000000])
-
-    #Q = np.diag([0, 1e6, 1e6, 1e7, 0.0, 0, 0.5e1, 0.0e1])
-    #
-    #R = np.eye(nu)
-    #R[0, 0] = 1e3
-    #R[1, 1] = 1e3
-    #
-    #Qe = np.diag([ 0, 5e7, 5e7, 5e7, 0, 0, 0.5e1, 0.0e1])
-
-    Q = np.diag([0, 0.3, 0.3, 0.8, 0, 0, 0.8, 0, 0, 0, 0, 0, 0, 0])
+    # set cost
+    Q = np.diag([0, 0, 0, 0.1, 0.1, 0, 0, 0.1, 0, 0])
     
     R = np.eye(nu)
     R[0, 0] = 0
-    R[1, 1] = 0
     
-    Qe = np.diag([0, 0.5, 0.5, 1.0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0])
+    Qe = np.diag([0, 0, 0, 0.1, 0.1, 0, 0, 0.1, 0, 0])
 
 
     ocp.cost.cost_type = "LINEAR_LS"
@@ -111,8 +94,8 @@ def acados_settings(Tf, N):
     ocp.cost.Vx = Vx
  
     Vu = np.zeros((ny, nu))
-    Vu[8, 0] = 1.0
-    Vu[9, 1] = 1.0
+    Vu[10, 0] = 1.0
+
     ocp.cost.Vu = Vu
 
     Vx_e = np.zeros((ny_e, nx))
@@ -125,16 +108,16 @@ def acados_settings(Tf, N):
     ocp.cost.Zu = 0 * np.ones((ns,))'''
 
     # set intial references
-    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     # setting constraints
-    ocp.constraints.lbx = np.array([model.u_min, model.u_min, model.r_min, model.Tport_min, model.Tstbd_min])
-    ocp.constraints.ubx = np.array([model.u_max, model.u_max, model.r_max, model.Tport_max, model.Tstbd_max])
-    ocp.constraints.idxbx = np.array([3,4,5,12,13])
-    ocp.constraints.lbu = np.array([model.Tportdot_min, model.Tstbddot_min])
-    ocp.constraints.ubu = np.array([model.Tportdot_max, model.Tstbddot_max])
-    ocp.constraints.idxbu = np.array([0, 1])
+    ocp.constraints.lbx = np.array([model.u_min, model.u_min, model.psid_min])
+    ocp.constraints.ubx = np.array([model.u_max, model.u_max, model.psid_max])
+    ocp.constraints.idxbx = np.array([5,6,9])
+    ocp.constraints.lbu = np.array([model.psiddot_min])
+    ocp.constraints.ubu = np.array([model.psiddot_max])
+    ocp.constraints.idxbu = np.array([0])
     # ocp.constraints.lsbx=np.zero s([1])
     # ocp.constraints.usbx=np.zeros([1])
     # ocp.constraints.idxsbx=np.array([1])
