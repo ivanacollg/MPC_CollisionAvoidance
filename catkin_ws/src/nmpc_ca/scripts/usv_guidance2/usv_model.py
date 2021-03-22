@@ -69,14 +69,16 @@ def usv_model():
     cospsi = MX.sym("cospsi")
     u = MX.sym("u")
     v = MX.sym("v")
+    r = MX.sym("r")
     ye = MX.sym("ye")
     ak = MX.sym("ak")
     psid = MX.sym("psid")
-    x = vertcat(nedx, nedy, psi, sinpsi, cospsi, u, v, ye, ak, psid)
+    rd = MX.sym("rd")
+    x = vertcat(nedx, nedy, psi, sinpsi, cospsi, u, v, r, ye, ak, psid, rd)
 
     # controls
-    Upsiddot = MX.sym("Upsiddot")
-    U = vertcat(Upsiddot)
+    Urddot = MX.sym("Urddot")
+    U = vertcat(Urddot)
 
     # xdot
     nedxdot = MX.sym("nedxdot")
@@ -86,10 +88,12 @@ def usv_model():
     cospsidot = MX.sym("cospsidot")
     udot = MX.sym("udot")
     vdot = MX.sym("vdot")
+    rdot = MX.sym("rdot")
     yedot = MX.sym("yedot")
     akdot = MX.sym("akdot")
     psiddot = MX.sym("psiddot")
-    xdot = vertcat(nedxdot, nedydot, psidot, sinpsidot, cospsidot, udot, vdot, yedot, akdot, psiddot)
+    rddot = MX.sym("rddot")
+    xdot = vertcat(nedxdot, nedydot, psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, akdot, psiddot, rddot)
 
     # algebraic variables
     z = vertcat([])
@@ -104,14 +108,16 @@ def usv_model():
     f_expl = vertcat(
       u*cos(psi) - v*sin(psi),
       u*sin(psi) + v*cos(psi),
-      (psid - psi)/T1,
-      cos(psi)*((psid - psi)/T1),
-      -sin(psi)*((psid - psi)/T1),
+      r,
+      cos(psi)*r,
+      -sin(psi)*r,
       0,
       0,
+      (rd-r)/T1,
       -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
       0,
-      Upsiddot,
+      rd,
+      Urddot,
     )
 
     # constraint on forces
@@ -119,18 +125,19 @@ def usv_model():
     #a_long = Fxd / m
 
     # Model bounds
-    model.u_min = -2.0
-    model.u_max = 2.0
     #model.psi_min = -pi
     #model.psi_max = pi
 
     # state bounds
     model.psid_min = -pi
     model.psid_max = pi
+    model.rd_min = -1.5
+    model.rd_max = 1.5
+
 
     # input bounds
-    model.psiddot_min = -1.5 # minimum throttle change rate
-    model.psiddot_max = 1.5 # maximum throttle change rate
+    model.rddot_min = -0.75 # minimum throttle change rate
+    model.rddot_max = 0.75 # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
@@ -156,13 +163,14 @@ def usv_model():
     starting_angle = 0.00
     u = 0
     v = 0
+    r = 0
     x1 = 2.0
     y1 = 2.0
     x2 = 6.0
     y2 = -15.0
     ak = np.math.atan2(y2-y1, x2-x1)
     ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
-    model.x0 = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u,v, ye, ak, 0.0])
+    model.x0 = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u, v, r, ye, ak, 0.0, 0.0])
 
 
     # define constraints struct
