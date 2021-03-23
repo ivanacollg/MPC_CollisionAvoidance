@@ -167,8 +167,8 @@ for i in range(Nsim):
     # update initial condition
     x0 = acados_solver.get(1, "x")
     # Add noise
-    if (abs(x0[2]) > (np.pi)):
-        x0[2] = (x0[2]/abs(x0[2]))*(abs(x0[2]) - 2*np.pi)
+    #if (abs(x0[2]) > (np.pi)):
+    #    x0[2] = (x0[2]/abs(x0[2]))*(abs(x0[2]) - 2*np.pi)
 
 
 

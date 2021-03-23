@@ -58,7 +58,7 @@ def usv_model():
     #kapparef_s = interpolant("kapparef_s", "bspline", [s0], kapparef)
 
     #USV model coefficients
-    T1 = 1.4
+    T1 = 1.0
 
     ## CasADi Model
     # set up states & controls
