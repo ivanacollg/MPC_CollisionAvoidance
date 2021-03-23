@@ -58,7 +58,7 @@ def usv_model():
     #kapparef_s = interpolant("kapparef_s", "bspline", [s0], kapparef)
 
     #USV model coefficients
-    T1 = 1.0
+    T1 = 1.4
 
     ## CasADi Model
     # set up states & controls
@@ -125,12 +125,12 @@ def usv_model():
     #a_long = Fxd / m
 
     # Model bounds
-    #model.psi_min = -pi
-    #model.psi_max = pi
+    model.psi_min = -pi
+    model.psi_max = pi
 
     # state bounds
-    model.psid_min = -pi
-    model.psid_max = pi
+    #model.psid_min = -pi
+    #model.psid_max = pi
     model.rd_min = -1.5
     model.rd_max = 1.5
 

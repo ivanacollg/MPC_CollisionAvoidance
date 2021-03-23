@@ -92,9 +92,15 @@ starting_angle = 0.00
 u = 0.5
 v = 0
 r = 0
+'''
 x1 = 3.0
 y1 = -5.0
 x2 = 10.0
+y2 = 5.0
+'''
+x1 = 1.0
+y1 = -1.0
+x2 = 1.0
 y2 = 5.0
 ak = np.math.atan2(y2-y1, x2-x1)
 ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
@@ -161,8 +167,8 @@ for i in range(Nsim):
     # update initial condition
     x0 = acados_solver.get(1, "x")
     # Add noise
-    #x0[3] = x0[3] #+ random()#*0.0002
-    #x0[5] = x0[5] #+ random()#*0.0002
+    if (abs(x0[2]) > (np.pi)):
+        x0[2] = (x0[2]/abs(x0[2]))*(abs(x0[2]) - 2*np.pi)
 
 
 

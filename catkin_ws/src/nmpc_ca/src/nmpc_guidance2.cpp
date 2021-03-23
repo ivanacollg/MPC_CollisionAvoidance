@@ -68,13 +68,15 @@ class NMPC
         psicos = 4,
         u = 5,
         v = 6,
-        ye = 7, 
-        ak = 8,
-        psid = 9
+        r = 7,
+        ye = 8, 
+        ak = 9,
+        psid = 10,
+        rd = 11
     };
 
     enum controlInputs{
-        Upsiddot = 0
+        Urddot = 0
     };
 
     struct solver_output{
@@ -100,8 +102,8 @@ class NMPC
     unsigned int i,j,ii;
 
     // global variables
-    double ak_des, psisin_des, psicos_des, u_des, v_des, ye_des;
-    double psi_callback, psisin_callback, psicos_callback, u_callback, v_callback, r_callback, past_psid;
+    double ak_des, psisin_des, psicos_des, u_des, v_des, r_des, ye_des;
+    double psi_callback, psisin_callback, psicos_callback, u_callback, v_callback, r_callback, past_psid, past_rd;
     double nedx_callback, nedy_callback;
     std_msgs::Float64 eye;
     std_msgs::Float64 desired_angle;
@@ -152,6 +154,7 @@ public:
         psicos_des = std::cos(ak_des);
         u_des = 0.0;
         v_des = 0.0;
+        r_des = 0.0;
 
         // Initialize state variables
         past_psid = 0.0;
@@ -260,9 +263,11 @@ public:
             acados_in.x0[psicos] = psicos_callback;
             acados_in.x0[u] = u_callback;
             acados_in.x0[v] = v_callback;
+            acados_in.x0[r] = r_callback;
             acados_in.x0[ye] = _ye;
             acados_in.x0[ak] = _ak;
             acados_in.x0[psid] = past_psid;
+            acados_in.x0[rd] = past_rd;
             
             // acados NMPC
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
@@ -277,10 +282,13 @@ public:
             acados_in.yref[4] = psicos_des;    // psicos
             acados_in.yref[5] = u_des;         // u
             acados_in.yref[6] = v_des;         // v
-            acados_in.yref[7] = ye_des;         // ye
-            acados_in.yref[8] = 0.00;         // ak
-            acados_in.yref[9] = 0.00;          // psid
-            acados_in.yref[10] = 0.00;          // Upsiddot
+            acados_in.yref[7] = r_des;         // r
+            acados_in.yref[8] = ye_des;         // ye
+            acados_in.yref[9] = 0.00;         // ak
+            acados_in.yref[10] = 0.00;          // psid
+            acados_in.yref[11] = 0.00;          // rd
+            acados_in.yref[12] = 0.00;          // Upsiddot
+            acados_in.yref[13] = 0.00;          // Urddot
 
             acados_in.yref_e[0] = 0.00;         // nedx
             acados_in.yref_e[1] = 0.00;         // nedy
@@ -289,9 +297,11 @@ public:
             acados_in.yref_e[4] = psicos_des;    // psicos
             acados_in.yref_e[5] = u_des;         // u
             acados_in.yref_e[6] = v_des;         // v
-            acados_in.yref_e[7] = ye_des;         // ye
-            acados_in.yref_e[8] = 0.00;         // ak
-            acados_in.yref_e[9] = 0.00;          // psid
+            acados_in.yref_e[7] = r_des;         // r
+            acados_in.yref_e[8] = ye_des;         // ye
+            acados_in.yref_e[9] = 0.00;         // ak
+            acados_in.yref_e[10] = 0.00;          // psid
+            acados_in.yref_e[10] = 0.00;          // rd
 
 
             for (ii = 0; ii < N; ii++)
@@ -313,8 +323,12 @@ public:
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
 
             desired_angle.data =  acados_out.x1[psid];
+            if (abs(desired_angle.data) > M_PI){
+              desired_angle.data = (desired_angle.data/abs(desired_angle.data))*(abs(desired_angle.data) - 2*M_PI);
+            }
             desired_heading_pub.publish(desired_angle);
-            past_psid = acados_out.x1[psid];
+            past_psid = desired_angle.data;
+            past_rd = acados_out.x1[rd];
 
             desired_speed_pub.publish(d_speed);
 
