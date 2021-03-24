@@ -72,12 +72,12 @@ def acados_settings(Tf, N):
     #nsh = 2
 
     # set cost
-    Q = np.diag([0, 0, 0, 0.05, 0.05, 0, 0, 0.02, 0.1, 0, 0.00, 0.00])
+    Q = np.diag([0, 0, 0, 0.05, 0.05, 0, 0, 0.3, 0.1, 0, 0.1])
     
     R = np.eye(nu)
-    R[0, 0] = 0.00
+    R[0, 0] = 0.5
 
-    Qe = np.diag([0, 0, 0, 0.1, 0.1, 0, 0, 0.03, 0.2, 0, 0.00, 0.0])
+    Qe = np.diag([0, 0, 0, 0.1, 0.1, 0, 0, 0.2, 0.2, 0, 0.11])
 
 
     ocp.cost.cost_type = "LINEAR_LS"
@@ -94,7 +94,7 @@ def acados_settings(Tf, N):
     ocp.cost.Vx = Vx
  
     Vu = np.zeros((ny, nu))
-    Vu[12, 0] = 1.0
+    Vu[11, 0] = 1.0
 
     ocp.cost.Vu = Vu
 
@@ -108,13 +108,13 @@ def acados_settings(Tf, N):
     ocp.cost.Zu = 0 * np.ones((ns,))'''
 
     # set intial references
-    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     # setting constraints
     ocp.constraints.lbx = np.array([model.rd_min])
     ocp.constraints.ubx = np.array([model.rd_max])
-    ocp.constraints.idxbx = np.array([11])
+    ocp.constraints.idxbx = np.array([10])
     ocp.constraints.lbu = np.array([model.rddot_min])
     ocp.constraints.ubu = np.array([model.rddot_max])
     ocp.constraints.idxbu = np.array([0])

@@ -92,7 +92,7 @@ starting_angle = 0.00
 u = 0.5
 v = 0
 r = 0
-
+'''
 x1 = 3.0
 y1 = -5.0
 x2 = 10.0
@@ -103,10 +103,10 @@ x1 = 1.0
 y1 = -1.0
 x2 = 1.0
 y2 = 5.0
-'''
+
 ak = np.math.atan2(y2-y1, x2-x1)
 ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
-x_start = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u, v, r, ye, ak, 0.0, 0.0])
+x_start = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u, v, r, ye, ak, 0.0])
 
 acados_solver.set(0, "lbx", x_start)
 acados_solver.set(0, "ubx", x_start)
@@ -124,9 +124,9 @@ for i in range(Nsim):
     #u_ref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, 0, 0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0])
+        yref=np.array([0, 0, 0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([0, 0, 0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0])
+    yref_N = np.array([0, 0, 0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 

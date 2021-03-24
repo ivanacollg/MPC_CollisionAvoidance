@@ -42,7 +42,7 @@ def usv_model():
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()
 
-    model_name = "usv_model_guidance2"
+    model_name = "usv_model_guidance3"
 
     # load track parameters
     #[s0, _, _, _, kapparef] = getTrack(track)
@@ -58,7 +58,7 @@ def usv_model():
     #kapparef_s = interpolant("kapparef_s", "bspline", [s0], kapparef)
 
     #USV model coefficients
-    T1 = 0.4
+    T1 = 1.0
 
     ## CasADi Model
     # set up states & controls
@@ -72,9 +72,8 @@ def usv_model():
     r = MX.sym("r")
     ye = MX.sym("ye")
     ak = MX.sym("ak")
-    psid = MX.sym("psid")
     rd = MX.sym("rd")
-    x = vertcat(nedx, nedy, psi, sinpsi, cospsi, u, v, r, ye, ak, psid, rd)
+    x = vertcat(nedx, nedy, psi, sinpsi, cospsi, u, v, r, ye, ak, rd)
 
     # controls
     Urddot = MX.sym("Urddot")
@@ -91,9 +90,8 @@ def usv_model():
     rdot = MX.sym("rdot")
     yedot = MX.sym("yedot")
     akdot = MX.sym("akdot")
-    psiddot = MX.sym("psiddot")
     rddot = MX.sym("rddot")
-    xdot = vertcat(nedxdot, nedydot, psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, akdot, psiddot, rddot)
+    xdot = vertcat(nedxdot, nedydot, psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, akdot, rddot)
 
     # algebraic variables
     z = vertcat([])
@@ -116,7 +114,6 @@ def usv_model():
       (rd-r)/T1,
       -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
       0,
-      rd,
       Urddot,
     )
 
@@ -131,13 +128,13 @@ def usv_model():
     # state bounds
     #model.psid_min = -pi
     #model.psid_max = pi
-    model.rd_min = -1.0
-    model.rd_max = 1.0
+    model.rd_min = -0.3
+    model.rd_max = 0.3
 
 
     # input bounds
-    model.rddot_min = -0.7 # minimum throttle change rate
-    model.rddot_max = 0.7 # maximum throttle change rate
+    model.rddot_min = -0.01 # minimum throttle change rate
+    model.rddot_max = 0.01 # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
@@ -170,7 +167,7 @@ def usv_model():
     y2 = -15.0
     ak = np.math.atan2(y2-y1, x2-x1)
     ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
-    model.x0 = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u, v, r, ye, ak, 0.0, 0.0])
+    model.x0 = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u, v, r, ye, ak, 0.0])
 
 
     # define constraints struct

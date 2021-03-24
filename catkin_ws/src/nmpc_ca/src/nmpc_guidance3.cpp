@@ -24,8 +24,8 @@
 #include "blasfeo/include/blasfeo_d_aux.h"
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
-#include "usv_model_guidance2_model/usv_model_guidance2_model.h"
-#include "acados_solver_usv_model_guidance2.h"
+#include "usv_model_guidance3_model/usv_model_guidance3_model.h"
+#include "acados_solver_usv_model_guidance3.h"
 
 // global data
 ocp_nlp_in * nlp_in;
@@ -71,8 +71,7 @@ class NMPC
         r = 7,
         ye = 8, 
         ak = 9,
-        psid = 10,
-        rd = 11
+        rd = 10
     };
 
     enum controlInputs{
@@ -179,7 +178,7 @@ public:
         acados_in.x0[v] = 0.0;
         acados_in.x0[ye] = 0.0;
         acados_in.x0[ak] = 0.0;
-        acados_in.x0[psid] = 0.0;
+        acados_in.x0[rd] = 0.0;
 
         waypoints.clear();
         last_waypoints.clear();
@@ -270,7 +269,6 @@ public:
             acados_in.x0[r] = r_callback;
             acados_in.x0[ye] = _ye;
             acados_in.x0[ak] = _ak;
-            acados_in.x0[psid] = past_psid;
             acados_in.x0[rd] = past_rd;
             
             // acados NMPC
@@ -289,10 +287,8 @@ public:
             acados_in.yref[7] = r_des;         // r
             acados_in.yref[8] = ye_des;         // ye
             acados_in.yref[9] = 0.00;         // ak
-            acados_in.yref[10] = 0.00;          // psid
-            acados_in.yref[11] = 0.00;          // rd
-            acados_in.yref[12] = 0.00;          // Upsiddot
-            acados_in.yref[13] = 0.00;          // Urddot
+            acados_in.yref[10] = 0.00;          // rd
+            acados_in.yref[11] = 0.00;          // Urddot
 
             acados_in.yref_e[0] = 0.00;         // nedx
             acados_in.yref_e[1] = 0.00;         // nedy
@@ -304,7 +300,6 @@ public:
             acados_in.yref_e[7] = r_des;         // r
             acados_in.yref_e[8] = ye_des;         // ye
             acados_in.yref_e[9] = 0.00;         // ak
-            acados_in.yref_e[10] = 0.00;          // psid
             acados_in.yref_e[10] = 0.00;          // rd
 
 
@@ -324,21 +319,13 @@ public:
             //ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
 
             // get solution at stage N = 1 (as thrust comes from x1 instead of u0 because of the derivative)
-            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 2, "x", (void *)acados_out.x2);
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
 
-            double desired_angle =  acados_out.x2[psid];
-            if (fabs(desired_angle) > M_PI){
-              desired_angle = (desired_angle/fabs(desired_angle))*(fabs(desired_angle) - 2*M_PI);
-            }
-            d_angle.data = desired_angle;
             //desired_heading_pub.publish(d_angle);
-            past_psid = desired_angle;
             past_rd = acados_out.x1[rd];
 
             d_r.data = acados_out.x1[rd];
             desired_r_pub.publish(d_r); 
-            desired_heading_pub.publish(d_r);
 
 
             desired_speed_pub.publish(d_speed);
@@ -353,7 +340,7 @@ public:
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "nmpc_pf");
+    ros::init(argc, argv, "nmpc_guidance3");
 
     ros::NodeHandle n("~");
     NMPC nmpc(n);
