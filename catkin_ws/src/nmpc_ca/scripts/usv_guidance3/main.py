@@ -98,11 +98,16 @@ y1 = -5.0
 x2 = 10.0
 y2 = 5.0
 
-'''
 x1 = 1.0
 y1 = -1.0
 x2 = 1.0
 y2 = 5.0
+'''
+
+x1 = 4.0
+y1 = -5.0
+x2 = 4.0
+y2 = 25.
 
 ak = np.math.atan2(y2-y1, x2-x1)
 ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
@@ -112,7 +117,7 @@ acados_solver.set(0, "lbx", x_start)
 acados_solver.set(0, "ubx", x_start)
 
 #References
-u_ref = 0.0
+u_ref = 0.7
 ak_ref = ak
 sinpsi_ref = np.sin(ak_ref)
 cospsi_ref = np.cos(ak_ref)

@@ -234,7 +234,7 @@ public:
             double y_squared = pow(y2 - nedy_callback, 2);
             double distance = pow(x_squared + y_squared, 0.5);
             std::cout<<"Distance:"<<distance<<".\n";
-            d_speed.data = 1.0;
+            d_speed.data = 0.7;
             if (distance > 1)
             {
                 double ak = atan2(y2-y1, x2-x1);
