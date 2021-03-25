@@ -144,18 +144,18 @@ public:
         }
 
         // ROS Publishers 
-        right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1);
-        left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1);
-        speed_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/speed_error", 1);
-        cross_track_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/cross_track_error", 1);
-        control_input_pub = n.advertise<geometry_msgs::Pose2D>("/usv_control/controller/control_input", 1);
-        target_pub = n.advertise<geometry_msgs::Pose2D>("/guidance/target", 1);
-        desired_speed_pub = n.advertise<std_msgs::Float64>("/guidance/desired_speed", 1);
+        right_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/right_thruster", 1000);
+        left_thruster_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/left_thruster", 1000);
+        speed_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/speed_error", 1000);
+        cross_track_error_pub = n.advertise<std_msgs::Float64>("/usv_control/controller/cross_track_error", 1000);
+        control_input_pub = n.advertise<geometry_msgs::Pose2D>("/usv_control/controller/control_input", 1000);
+        target_pub = n.advertise<geometry_msgs::Pose2D>("/guidance/target", 1000);
+        desired_speed_pub = n.advertise<std_msgs::Float64>("/guidance/desired_speed", 1000);
 
         // ROS Subscribers
-        local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
-        ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 5, &NMPC::positionCallback, this);
-        waypoints_sub = n.subscribe("/mission/waypoints", 5, &NMPC::waypointsCallback, this);
+        local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, &NMPC::velocityCallback, this);
+        ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 1000, &NMPC::positionCallback, this);
+        waypoints_sub = n.subscribe("/mission/waypoints", 1000, &NMPC::waypointsCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
@@ -210,8 +210,6 @@ public:
         nedx_callback = _pos->x;
         nedy_callback = _pos->y;
         psi_callback = _pos->theta;
-        psisin_callback = std::sin(psi_callback);
-        psicos_callback = std::cos(psi_callback);
     }
 
     void waypointsCallback(const std_msgs::Float32MultiArray::ConstPtr& _msg)
@@ -271,6 +269,12 @@ public:
 
     void control(double _x1, double _y1, double _ak, double _ye)
         {
+
+            double beta = std::atan2(v_callback, u_callback+.001);
+            double chi = psi_callback + beta;
+            psisin_callback = std::sin(chi);
+            psicos_callback = std::cos(chi);
+
             acados_in.x0[psi] = psi_callback;
             acados_in.x0[psisin] = psisin_callback;
             acados_in.x0[psicos] = psicos_callback;

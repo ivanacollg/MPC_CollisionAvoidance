@@ -204,8 +204,6 @@ public:
         nedx_callback = _pos->x;
         nedy_callback = _pos->y;
         psi_callback = _pos->theta;
-        psisin_callback = std::sin(psi_callback);
-        psicos_callback = std::cos(psi_callback);
     }
 
     void waypointsCallback(const std_msgs::Float32MultiArray::ConstPtr& _msg)
@@ -259,6 +257,12 @@ public:
 
     void control(double _x1, double _y1, double _ak, double _ye)
         {
+
+            double beta = std::atan2(v_callback, u_callback+.001);
+            double chi = psi_callback + beta;
+            psisin_callback = std::sin(chi);
+            psicos_callback = std::cos(chi);
+
             acados_in.x0[nedx] = nedx_callback;
             acados_in.x0[nedy] = nedy_callback;
             acados_in.x0[psi] = psi_callback;

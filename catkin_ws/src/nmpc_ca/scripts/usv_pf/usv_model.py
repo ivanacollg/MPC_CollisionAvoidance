@@ -74,7 +74,7 @@ def usv_model():
     m = 30
     Iz = 4.1
     B = 0.41
-    c = 0.78
+    c = 1.0
 
     ## CasADi Model
     # set up states & controls
@@ -131,10 +131,12 @@ def usv_model():
     Nr = (-0.52)*sqrt(u*u + v*v)
     Tu = Tport + c * Tstbd
     Tr = (Tport - c * Tstbd) * B / 2
+    beta = atan2(v,u+.001)
+    chi = psi + beta
     f_expl = vertcat(
       r,
-      cos(psi)*r,
-      -sin(psi)*r,
+      cos(chi)*r,
+      -sin(chi)*r,
       (Tu - (-m + 2 * Y_v_dot)*v - (Y_r_dot + N_v_dot)*r*r - (-Xu*u - Xuu*fabs(u)*u)) / (m - X_u_dot),
       (-(m - X_u_dot)*u*r - (- Yv - Yvv*fabs(v) - Yvr*fabs(r))*v) / (m - Y_v_dot),
       (Tr - (-2*Y_v_dot*u*v - (Y_r_dot + N_v_dot)*r*u + X_u_dot*u*r) - (-Nr*r - Nrv*fabs(v)*r - Nrr*fabs(r)*r)) / (Iz - N_r_dot),
