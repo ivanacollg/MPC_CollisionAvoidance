@@ -131,13 +131,13 @@ def usv_model():
     # state bounds
     #model.psid_min = -pi
     #model.psid_max = pi
-    model.rd_min = -0.4
-    model.rd_max = 0.4
+    model.rd_min = -0.35
+    model.rd_max = 0.35
 
 
     # input bounds
-    model.rddot_min = -0.75 # minimum throttle change rate
-    model.rddot_max = 0.75 # maximum throttle change rate
+    model.rddot_min = -0.25 # minimum throttle change rate
+    model.rddot_max = 0.25 # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
