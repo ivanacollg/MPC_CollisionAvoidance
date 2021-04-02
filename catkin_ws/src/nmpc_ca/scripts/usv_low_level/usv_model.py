@@ -42,7 +42,7 @@ def usv_model():
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()
 
-    model_name = "usv_model_pf"
+    model_name = "usv_model_low_level"
 
     # load track parameters
     #[s0, _, _, _, kapparef] = getTrack(track)
@@ -74,7 +74,7 @@ def usv_model():
     m = 30
     Iz = 4.1
     B = 0.41
-    c = 1.0
+    c = 0.78
 
     ## CasADi Model
     # set up states & controls
@@ -84,15 +84,9 @@ def usv_model():
     u = MX.sym("u")
     v = MX.sym("v")
     r = MX.sym("r")
-    ye = MX.sym("ye")
-    x1 = MX.sym("x1")
-    y1 = MX.sym("y1")
-    ak = MX.sym("ak")
-    nedx = MX.sym("nedx")
-    nedy = MX.sym("nedy")
     Tport = MX.sym("Tport")
     Tstbd = MX.sym("Tstbd")
-    x = vertcat(psi, sinpsi, cospsi, u, v, r, ye, x1, y1, ak, nedx, nedy, Tport, Tstbd)
+    x = vertcat(psi, sinpsi, cospsi, u, v, r, Tport, Tstbd)
 
     # controls
     UTportdot = MX.sym("UTportdot")
@@ -106,15 +100,9 @@ def usv_model():
     udot = MX.sym("udot")
     vdot = MX.sym("vdot")
     rdot = MX.sym("rdot")
-    yedot = MX.sym("yedot")
-    x1dot = MX.sym("x1dot")
-    y1dot = MX.sym("y1dot")
-    akdot = MX.sym("akdot")
-    nedxdot = MX.sym("nedxdot")
-    nedydot = MX.sym("nedydot")
     Tportdot = MX.sym("Tportdot")
     Tstbddot = MX.sym("Tstbddot")
-    xdot = vertcat(psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, x1dot, y1dot, akdot, nedxdot, nedydot, Tportdot, Tstbddot)
+    xdot = vertcat(psidot, sinpsidot, cospsidot, udot, vdot, rdot, Tportdot, Tstbddot)
 
     # algebraic variables
     z = vertcat([])
@@ -131,21 +119,13 @@ def usv_model():
     Nr = (-0.52)*sqrt(u*u + v*v)
     Tu = Tport + c * Tstbd
     Tr = (Tport - c * Tstbd) * B / 2
-    beta = atan2(v,u+.001)
-    chi = psi + beta
     f_expl = vertcat(
       r,
-      cos(chi)*r,
-      -sin(chi)*r,
+      cos(psi)*r,
+      -sin(psi)*r,
       (Tu - (-m + 2 * Y_v_dot)*v - (Y_r_dot + N_v_dot)*r*r - (-Xu*u - Xuu*fabs(u)*u)) / (m - X_u_dot),
       (-(m - X_u_dot)*u*r - (- Yv - Yvv*fabs(v) - Yvr*fabs(r))*v) / (m - Y_v_dot),
       (Tr - (-2*Y_v_dot*u*v - (Y_r_dot + N_v_dot)*r*u + X_u_dot*u*r) - (-Nr*r - Nrv*fabs(v)*r - Nrr*fabs(r)*r)) / (Iz - N_r_dot),
-      -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
-      0,
-      0,
-      0,
-      u*cos(psi) - v*sin(psi),
-      u*sin(psi) + v*cos(psi),
       UTportdot,
       UTstbddot/c,
     )
@@ -182,15 +162,7 @@ def usv_model():
 
     # Define initial conditions
     starting_angle = 0.00
-    x1 = 1.0
-    y1 = -1.0
-    x2 = 1.0
-    y2 = 3.8
-    ak = np.arctan2(y2-y1, x2-x1)
-    ye = 0.0
-    nedx = 0
-    nedy = 0
-    model.x0 = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+    model.x0 = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, 0.00, 0.00])
 
     # define constraints struct
     #constraint.alat = Function("a_lat", [x, u], [a_lat])

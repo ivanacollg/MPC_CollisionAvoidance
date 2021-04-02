@@ -42,7 +42,7 @@ def usv_model():
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()
 
-    model_name = "usv_model_pf"
+    model_name = "usv_model_guidance"
 
     # load track parameters
     #[s0, _, _, _, kapparef] = getTrack(track)
@@ -58,63 +58,38 @@ def usv_model():
     #kapparef_s = interpolant("kapparef_s", "bspline", [s0], kapparef)
 
     #USV model coefficients
-    X_u_dot = -2.25
-    Y_v_dot = -23.13
-    Y_r_dot = -1.31
-    N_v_dot = -16.41
-    N_r_dot = -2.79
-    Yvv = -99.99
-    Yvr = -5.49
-    Yrv = -5.49
-    Yrr = -8.8
-    Nvv = -5.49
-    Nvr = -8.8
-    Nrv = -8.8
-    Nrr = -3.49
-    m = 30
-    Iz = 4.1
-    B = 0.41
-    c = 1.0
+    T1 = 1.0
 
     ## CasADi Model
     # set up states & controls
+    nedx = MX.sym("nedx")
+    nedy = MX.sym("nedy")
     psi = MX.sym("psi")
     sinpsi = MX.sym("sinpsi")
     cospsi = MX.sym("cospsi")
     u = MX.sym("u")
     v = MX.sym("v")
-    r = MX.sym("r")
     ye = MX.sym("ye")
-    x1 = MX.sym("x1")
-    y1 = MX.sym("y1")
     ak = MX.sym("ak")
-    nedx = MX.sym("nedx")
-    nedy = MX.sym("nedy")
-    Tport = MX.sym("Tport")
-    Tstbd = MX.sym("Tstbd")
-    x = vertcat(psi, sinpsi, cospsi, u, v, r, ye, x1, y1, ak, nedx, nedy, Tport, Tstbd)
+    psid = MX.sym("psid")
+    x = vertcat(nedx, nedy, psi, sinpsi, cospsi, u, v, ye, ak, psid)
 
     # controls
-    UTportdot = MX.sym("UTportdot")
-    UTstbddot = MX.sym("UTstbddot")
-    U = vertcat(UTportdot, UTstbddot)
+    Upsiddot = MX.sym("Upsiddot")
+    U = vertcat(Upsiddot)
 
     # xdot
+    nedxdot = MX.sym("nedxdot")
+    nedydot = MX.sym("nedydot")
     psidot = MX.sym("psidot")
     sinpsidot = MX.sym("sinpsidot")
     cospsidot = MX.sym("cospsidot")
     udot = MX.sym("udot")
     vdot = MX.sym("vdot")
-    rdot = MX.sym("rdot")
     yedot = MX.sym("yedot")
-    x1dot = MX.sym("x1dot")
-    y1dot = MX.sym("y1dot")
     akdot = MX.sym("akdot")
-    nedxdot = MX.sym("nedxdot")
-    nedydot = MX.sym("nedydot")
-    Tportdot = MX.sym("Tportdot")
-    Tstbddot = MX.sym("Tstbddot")
-    xdot = vertcat(psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, x1dot, y1dot, akdot, nedxdot, nedydot, Tportdot, Tstbddot)
+    psiddot = MX.sym("psiddot")
+    xdot = vertcat(nedxdot, nedydot, psidot, sinpsidot, cospsidot, udot, vdot, yedot, akdot, psiddot)
 
     # algebraic variables
     z = vertcat([])
@@ -125,29 +100,18 @@ def usv_model():
     # dynamics
     #Fxd = (Cm1 - Cm2 * v) * D - Cr2 * v * v - Cr0 * tanh(5 * v)
     #sdota = (v * cos(alpha + C1 * delta)) / (1 - kapparef_s(s) * n)
-    Xu = if_else(u > 1.25, 64.55, -25)
-    Xuu = if_else(u > 1.25, -70.92, 0)
-    Yv = 0.5*(-40*1000*fabs(v))*(1.1+0.0045*(1.01/0.09)-0.1*(0.27/0.09)+0.016*((0.27/0.09)*(0.27/0.09)))
-    Nr = (-0.52)*sqrt(u*u + v*v)
-    Tu = Tport + c * Tstbd
-    Tr = (Tport - c * Tstbd) * B / 2
-    beta = atan2(v,u+.001)
-    chi = psi + beta
+
     f_expl = vertcat(
-      r,
-      cos(chi)*r,
-      -sin(chi)*r,
-      (Tu - (-m + 2 * Y_v_dot)*v - (Y_r_dot + N_v_dot)*r*r - (-Xu*u - Xuu*fabs(u)*u)) / (m - X_u_dot),
-      (-(m - X_u_dot)*u*r - (- Yv - Yvv*fabs(v) - Yvr*fabs(r))*v) / (m - Y_v_dot),
-      (Tr - (-2*Y_v_dot*u*v - (Y_r_dot + N_v_dot)*r*u + X_u_dot*u*r) - (-Nr*r - Nrv*fabs(v)*r - Nrr*fabs(r)*r)) / (Iz - N_r_dot),
-      -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
-      0,
-      0,
-      0,
       u*cos(psi) - v*sin(psi),
       u*sin(psi) + v*cos(psi),
-      UTportdot,
-      UTstbddot/c,
+      (psid - psi)/T1,
+      cos(psi)*((psid - psi)/T1),
+      -sin(psi)*((psid - psi)/T1),
+      0,
+      0,
+      -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
+      0,
+      Upsiddot,
     )
 
     # constraint on forces
@@ -157,21 +121,16 @@ def usv_model():
     # Model bounds
     model.u_min = -2.0
     model.u_max = 2.0
+    #model.psi_min = -pi
+    #model.psi_max = pi
 
     # state bounds
-    model.Tport_min = -30
-    model.Tstbd_min = -30
-    model.Tport_max = 35
-    model.Tstbd_max = 35
-
-    model.r_min = -10.0 # minimum angular velocity [rad/s]
-    model.r_max = 10.0  # maximum angular velocity [rad/s]
+    model.psid_min = -pi
+    model.psid_max = pi
 
     # input bounds
-    model.Tstbddot_min = -30 # minimum throttle change rate
-    model.Tstbddot_max = 30 # maximum throttle change rate
-    model.Tportdot_min = -30 # minimum throttle change rate
-    model.Tportdot_max = 30 # maximum throttle change rate
+    model.psiddot_min = -1.5 # minimum throttle change rate
+    model.psiddot_max = 1.5 # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
@@ -181,16 +140,30 @@ def usv_model():
     #constraint.along_max = 4  # maximum lateral force [m/s^2]
 
     # Define initial conditions
-    starting_angle = 0.00
-    x1 = 1.0
-    y1 = -1.0
-    x2 = 1.0
-    y2 = 3.8
-    ak = np.arctan2(y2-y1, x2-x1)
-    ye = 0.0
+    #starting_angle = 0.00
+    #x1 = 1.0
+    #y1 = -1.0
+    #x2 = 1.0
+    #y2 = 3.8
+    #ak = np.arctan2(y2-y1, x2-x1)
+    #ye = 0.0
+    #nedx = 0
+    #nedy = 0
+    #model.x0 = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+    #Start values
     nedx = 0
     nedy = 0
-    model.x0 = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+    starting_angle = 0.00
+    u = 0
+    v = 0
+    x1 = 2.0
+    y1 = 2.0
+    x2 = 6.0
+    y2 = -15.0
+    ak = np.math.atan2(y2-y1, x2-x1)
+    ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
+    model.x0 = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u,v, ye, ak, 0.0])
+
 
     # define constraints struct
     #constraint.alat = Function("a_lat", [x, u], [a_lat])
@@ -199,22 +172,7 @@ def usv_model():
 
     # Define model struct
     params = types.SimpleNamespace()
-    params.X_u_dot = X_u_dot
-    params.Y_v_dot = Y_v_dot
-    params.Y_r_dot = Y_r_dot
-    params.N_v_dot = N_v_dot
-    params.N_r_dot = N_r_dot
-    params.Yvv = Yvv
-    params.Yvr = Yvr
-    params.Yrv = Yrv
-    params.Yrr = Yrr
-    params.Nvv = Nvv
-    params.Nvr = Nvr
-    params.Nrv = Nrv
-    params.m = m
-    params.Iz = Iz
-    params.B = B
-    params.c = c
+    params.T1 = T1
 
     model.f_impl_expr = xdot - f_expl
     model.f_expl_expr = f_expl

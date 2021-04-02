@@ -53,7 +53,7 @@ The simulation starts at s=-2m until one round is completed(s=8.71m). The beginn
 
 Tf = 1.0  # prediction horizon
 N = 100  # number of discretization steps
-T = 20.00  # maximum simulation time[s]
+T = 10.00  # maximum simulation time[s]
 #sref_N = 3  # reference for final reference progress
 
 # load model
@@ -68,11 +68,17 @@ Nsim = int(T * N / Tf)
 # initialize data structs
 simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
-simError = np.ndarray((Nsim, 3))
+simdis = np.ndarray((Nsim, 2))
+simError = np.ndarray((Nsim, 2))
 
 #s0 = model.x0[0]
 tcomp_sum = 0
 tcomp_max = 0
+
+psi_ref = 1.0#np.pi/2.0
+sinpsi_ref = np.sin(psi_ref)
+cospsi_ref = np.cos(psi_ref)
+u_ref = 0.8
 
 x_pos = 0.0
 y_pos = 0.0
@@ -82,33 +88,8 @@ psi_error = 0.0
 u_error = 0.0
 psi_mae = 0.0 # Mean Absolute Error 
 u_mae = 0.0 # Mean Absolute Error 
-ye_mae = 0.0
 psi_mse = 0.0 # Mean Square Error 
 u_mse = 0.0 # Mean Square Error 
-ye_mse = 0.0
-
-
-#Start values
-starting_angle = 0.00
-x1 = 4.0
-y1 = -5.0
-x2 = 4.0
-y2 = 25.0
-ak = np.math.atan2(y2-y1, x2-x1)
-nedx = 0
-nedy = 0
-ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
-x_start = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
-
-acados_solver.set(0, "lbx", x_start)
-acados_solver.set(0, "ubx", x_start)
-
-#References
-u_ref = 0.7
-ak_ref = ak
-sinpsi_ref = np.sin(ak_ref)
-cospsi_ref = np.cos(ak_ref)
-ye_ref = 0.0
 
 # simulate
 for i in range(Nsim):
@@ -116,9 +97,9 @@ for i in range(Nsim):
     #u_ref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0])
+    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 
@@ -140,27 +121,31 @@ for i in range(Nsim):
     x0 = acados_solver.get(0, "x")
     u0 = acados_solver.get(0, "u")
 
+    #Get values for grafic display
+    x_vel = x0[3]*np.cos(x0[0])-x0[4]*np.sin(x0[0])
+    y_vel = x0[3]*np.sin(x0[0])+x0[4]*np.cos(x0[0])
+    x_pos = ((x_vel+x_vel_last)/2)*(Tf/N) + x_pos
+    y_pos = ((y_vel+y_vel_last)/2)*(Tf/N) + y_pos
+    x_vel_last = x_vel
+    y_vel_last = y_vel
+    simdis[i,0] = x_pos
+    simdis[i,1] = y_pos
 
     for j in range(nx):
         simX[i, j] = x0[j]
     for j in range(nu):
         simU[i, j] = u0[j]
     
-    psi_error = x0[0] - ak_ref
+    psi_error = x0[0] - psi_ref
     u_error = x0[3] - u_ref
-    ye_error = x0[6] - ye_ref
     simError[i,0] = psi_error
     simError[i,1] = u_error
-    simError[i,2] = ye_error
 
     if (i>400):
         psi_mae += abs(psi_error)
         u_mae += abs(u_error)
-        ye_mae += abs(ye_error)
         psi_mse += psi_error*psi_error
         u_mse += u_error*u_error
-        ye_mse += ye_error*ye_error
-
 
     # update initial condition
     x0 = acados_solver.get(1, "x")
@@ -186,7 +171,7 @@ for i in range(Nsim):
 # Plot Results
 t = np.linspace(0.0, Nsim * Tf / N, Nsim)
 
-plotRes(simX, simU, simError, t)
+plotRes(simX, simU, simdis, simError, t)
 #plotTrackProj(simX, track)
 #plotalat(simX, simU, constraint, t)
 
@@ -196,13 +181,10 @@ print("Maximum computation time: {}".format(tcomp_max))
 #print("Average speed:{}m/s".format(np.average(simX[:, 3])))
 print("Lap time: {}s".format(Tf * Nsim / N))
 
-#print("Mean Absolute Error psi: {}".format(psi_mae/600))
+print("Mean Absolute Error psi: {}".format(psi_mae/600))
 print("Mean Square Error psi: {}".format(psi_mse/600))
 print("Mean Absolute Error u: {}".format(u_mae/600))
 print("Mean Square Error u: {}".format(u_mse/600))
-print("Mean Absolute Error ye: {}".format(ye_mae/600))
-print("Mean Square Error ye: {}".format(ye_mse/600))
-
 
 # avoid plotting when running on Travis
 if os.environ.get("ACADOS_ON_TRAVIS") is None:

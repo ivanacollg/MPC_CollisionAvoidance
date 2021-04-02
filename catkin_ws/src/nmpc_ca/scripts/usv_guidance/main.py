@@ -79,32 +79,31 @@ y_pos = 0.0
 x_vel_last = 0.0
 y_vel_last = 0.0
 psi_error = 0.0
-u_error = 0.0
 psi_mae = 0.0 # Mean Absolute Error 
-u_mae = 0.0 # Mean Absolute Error 
 ye_mae = 0.0
 psi_mse = 0.0 # Mean Square Error 
-u_mse = 0.0 # Mean Square Error 
 ye_mse = 0.0
 
 
 #Start values
-starting_angle = 0.00
-x1 = 4.0
-y1 = -5.0
-x2 = 4.0
-y2 = 25.0
-ak = np.math.atan2(y2-y1, x2-x1)
 nedx = 0
 nedy = 0
+starting_angle = 0.00
+u = 0.5
+v = 0
+x1 = 3.0
+y1 = -5.0
+x2 = 10.0
+y2 = 5.0
+ak = np.math.atan2(y2-y1, x2-x1)
 ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
-x_start = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+x_start = np.array([nedx, nedy, starting_angle, np.sin(starting_angle), np.cos(starting_angle), u,v, ye, ak, 0.0])
 
 acados_solver.set(0, "lbx", x_start)
 acados_solver.set(0, "ubx", x_start)
 
 #References
-u_ref = 0.7
+u_ref = 0.0
 ak_ref = ak
 sinpsi_ref = np.sin(ak_ref)
 cospsi_ref = np.cos(ak_ref)
@@ -116,9 +115,9 @@ for i in range(Nsim):
     #u_ref = 1.4 #u0 + #sref_N
     for j in range(N):
         #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        yref=np.array([0, 0, 0, sinpsi_ref, cospsi_ref, u_ref, 0, ye_ref, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0])
+    yref_N = np.array([0, 0, 0, sinpsi_ref, cospsi_ref, u_ref, 0, ye_ref, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
 
@@ -146,19 +145,15 @@ for i in range(Nsim):
     for j in range(nu):
         simU[i, j] = u0[j]
     
-    psi_error = x0[0] - ak_ref
-    u_error = x0[3] - u_ref
-    ye_error = x0[6] - ye_ref
+    psi_error = x0[2] - ak_ref
+    ye_error = x0[7] - ye_ref
     simError[i,0] = psi_error
-    simError[i,1] = u_error
-    simError[i,2] = ye_error
+    simError[i,1] = ye_error
 
     if (i>400):
         psi_mae += abs(psi_error)
-        u_mae += abs(u_error)
         ye_mae += abs(ye_error)
         psi_mse += psi_error*psi_error
-        u_mse += u_error*u_error
         ye_mse += ye_error*ye_error
 
 
@@ -167,6 +162,10 @@ for i in range(Nsim):
     # Add noise
     #x0[3] = x0[3] #+ random()#*0.0002
     #x0[5] = x0[5] #+ random()#*0.0002
+
+
+
+
 
     acados_solver.set(0, "lbx", x0)
     acados_solver.set(0, "ubx", x0)
@@ -198,8 +197,6 @@ print("Lap time: {}s".format(Tf * Nsim / N))
 
 #print("Mean Absolute Error psi: {}".format(psi_mae/600))
 print("Mean Square Error psi: {}".format(psi_mse/600))
-print("Mean Absolute Error u: {}".format(u_mae/600))
-print("Mean Square Error u: {}".format(u_mse/600))
 print("Mean Absolute Error ye: {}".format(ye_mae/600))
 print("Mean Square Error ye: {}".format(ye_mse/600))
 
