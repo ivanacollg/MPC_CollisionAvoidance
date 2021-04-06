@@ -31,6 +31,7 @@ set(acados_lib "${PROJECT_SOURCE_DIR}/acados/lib")
 set(full_model_build ${PROJECT_SOURCE_DIR}/scripts/usv_acados/c_generated_code)
 set(full_model_low_level ${PROJECT_SOURCE_DIR}/scripts/usv_low_level/c_generated_code)
 set(full_model_pf ${PROJECT_SOURCE_DIR}/scripts/usv_pf/c_generated_code)
+set(full_model_pf_curved ${PROJECT_SOURCE_DIR}/scripts/usv_pf_curved/c_generated_code)
 set(full_model_guidance ${PROJECT_SOURCE_DIR}/scripts/usv_guidance/c_generated_code)
 set(full_model_guidance2 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance2/c_generated_code)
 set(full_model_guidance3 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance3/c_generated_code)
@@ -70,6 +71,7 @@ include_directories(
 	${full_model_build}
 	${full_model_low_level}
 	${full_model_pf}
+	${full_model_pf_curved}
 	${full_model_guidance}
 	${full_model_guidance2}
 	${full_model_guidance3}
@@ -85,6 +87,7 @@ include_directories(
 link_directories(${full_model_build})
 link_directories(${full_model_low_level})
 link_directories(${full_model_pf})
+link_directories(${full_model_pf_curved})
 link_directories(${full_model_guidance})
 link_directories(${full_model_guidance2})
 link_directories(${full_model_guidance3})
@@ -113,6 +116,14 @@ target_link_libraries(nmpc_low_level
 add_executable(nmpc_pf src/nmpc_pf.cpp)
 target_link_libraries(nmpc_pf
 	${full_model_pf}/libacados_ocp_solver_usv_model_pf.so
+	#${acados_lib}/libacados.a
+	${acados_lib}/libacados.so
+	${catkin_LIBRARIES}
+)
+
+add_executable(nmpc_pf_curved src/nmpc_pf_curved.cpp)
+target_link_libraries(nmpc_pf_curved
+	${full_model_pf_curved}/libacados_ocp_solver_usv_model_pf_curved.so
 	#${acados_lib}/libacados.a
 	${acados_lib}/libacados.so
 	${catkin_LIBRARIES}
