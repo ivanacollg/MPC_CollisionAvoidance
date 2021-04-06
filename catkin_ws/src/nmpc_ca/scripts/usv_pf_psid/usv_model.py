@@ -161,8 +161,8 @@ def usv_model():
     # state bounds
     model.Tport_min = -30
     model.Tstbd_min = -30
-    model.Tport_max = 35
-    model.Tstbd_max = 35
+    model.Tport_max = 36.5
+    model.Tstbd_max = 36.5
 
     model.r_min = -10.0 # minimum angular velocity [rad/s]
     model.r_max = 10.0  # maximum angular velocity [rad/s]
