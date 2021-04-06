@@ -237,7 +237,7 @@ public:
             double x_squared = pow(x2 - nedx_callback, 2);
             double y_squared = pow(y2 - nedy_callback, 2);
             double distance = pow(x_squared + y_squared, 0.5);
-            std::cout<<"Distance:"<<distance<<".\n";
+            //std::cout<<"Distance:"<<distance<<".\n";
             d_speed.data = 0.7;
             u_des = 0.7;
             if (distance > 1)
@@ -345,6 +345,8 @@ public:
 
             // get solution at stage N = 1 (as thrust comes from x1 instead of u0 because of the derivative)
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
+
+            std::cout<<"angle x:"<<acados_out.x1[psi]<<".\n";
 
             left_thruster.data =  acados_out.x1[Tport];
             right_thruster.data =  acados_out.x1[Tstbd];
