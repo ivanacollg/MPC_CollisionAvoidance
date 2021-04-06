@@ -70,9 +70,11 @@ simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
 simError = np.ndarray((Nsim, 3))
 
-obsx = np.array([2,4,3,6])
-obsy = np.array([4,8,16,20])
+obsx = np.array([3,4,3.7,4.2])
+obsy = np.array([2,8,16,20])
 radius = 0.5
+pobs = np.zeros(8)
+robs = np.zeros(4)
 
 #s0 = model.x0[0]
 tcomp_sum = 0
@@ -118,13 +120,21 @@ ye_ref = 0.0
 for i in range(Nsim):
     # update reference
     #u_ref = 1.4 #u0 + #sref_N
+    for ii in range(len(obsx)):
+        pobs[2*ii] = obsx[ii]
+        pobs[2*ii+1] = obsy[ii]
+        robs[ii] = radius + 0.2
     for j in range(N):
         #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
         yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
+        acados_solver.set(j, "p", pobs)
+        acados_solver.constraints_set(j, "lh", robs)
     yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0])
     # yref_N=np.array([0,0,0,0,0,0])
     acados_solver.set(N, "yref", yref_N)
+    acados_solver.set(N, "p", pobs)
+    #acados_solver.constraints_set(N, "lh", robs)
 
     # solve ocp
     t = time.time()

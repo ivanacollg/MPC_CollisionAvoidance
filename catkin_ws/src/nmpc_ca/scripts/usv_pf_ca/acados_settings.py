@@ -59,13 +59,14 @@ def acados_settings(Tf, N):
     ocp.model = model_ac
 
     # define constraint
-    #model_ac.con_h_expr = constraint.expr #uncomment to avoid 1 obstacle at [4,8]
+    model_ac.con_h_expr = constraint.expr #uncomment to avoid 1 obstacle
 
     # set dimensions
     nx = model.x.size()[0]
     nu = model.U.size()[0]
     ny = nx + nu
     ny_e = nx
+    #np = model.p.size()[0]
 
     ocp.dims.N = N
     #ns = 2
@@ -139,22 +140,31 @@ def acados_settings(Tf, N):
     # ocp.constraints.lsbx=np.zero s([1])
     # ocp.constraints.usbx=np.zeros([1])
     # ocp.constraints.idxsbx=np.array([1])
-    '''ocp.constraints.lh = np.array( #uncomment to avoid 1 obstacle at [4,8]
+    ocp.constraints.lh = np.array(
         [
+             constraint.distance_min,
+             constraint.distance_min,
+             constraint.distance_min,
              constraint.distance_min
         ]
     )
     ocp.constraints.uh = np.array(
         [
+            1000000,
+            1000000,
+            1000000,
             1000000
         ]
-    )''' 
+    ) 
     '''ocp.constraints.lsh = np.zeros(nsh)
     ocp.constraints.ush = np.zeros(nsh)
     ocp.constraints.idxsh = np.array([0, 2])'''
 
     # set intial condition
     ocp.constraints.x0 = model.x0
+
+    # set initial parameters
+    ocp.parameter_values = np.array([0,0,0,0,0,0,0,0])
 
     # set QP solver and integration
     ocp.solver_options.tf = Tf

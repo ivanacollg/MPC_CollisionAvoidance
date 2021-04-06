@@ -120,7 +120,16 @@ def usv_model():
     z = vertcat([])
 
     # parameters
-    p = vertcat([])
+    ox1 = MX.sym("ox1")
+    oy1 = MX.sym("oy1")
+    ox2 = MX.sym("ox1")
+    oy2 = MX.sym("oy1")
+    ox3 = MX.sym("ox1")
+    oy3 = MX.sym("oy1")
+    ox4 = MX.sym("ox1")
+    oy4 = MX.sym("oy1")
+    p = vertcat(ox1,oy1,ox2,oy2,ox3,oy3,ox4,oy4)
+    #p = vertcat([])
 
     # dynamics
     #Fxd = (Cm1 - Cm2 * v) * D - Cr2 * v * v - Cr0 * tanh(5 * v)
@@ -153,7 +162,10 @@ def usv_model():
     # constraint on forces
     #a_lat = C2 * v * v * delta + Fxd * sin(C1 * delta) / m
     #a_long = Fxd / m
-    #distance = sqrt((nedx-4)*(nedx-4) + (nedy-8)*(nedy-8)) #uncomment to avoid 1 obstacle at [4,8]
+    distance1 = sqrt((nedx-ox1)*(nedx-ox1) + (nedy-oy1)*(nedy-oy1))
+    distance2 = sqrt((nedx-ox2)*(nedx-ox2) + (nedy-oy2)*(nedy-oy2))
+    distance3 = sqrt((nedx-ox3)*(nedx-ox3) + (nedy-oy3)*(nedy-oy3))
+    distance4 = sqrt((nedx-ox4)*(nedx-ox4) + (nedy-oy4)*(nedy-oy4))
 
     # Model bounds
     model.u_min = -2.0
@@ -177,7 +189,7 @@ def usv_model():
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
     #constraint.alat_max = 4  # maximum lateral force [m/s^1]
-    #constraint.distance_min = 0.5 #uncomment to avoid 1 obstacle at [4,8]
+    constraint.distance_min = 0.0
 
     #constraint.along_min = -4  # maximum lateral force [m/s^2]
     #constraint.along_max = 4  # maximum lateral force [m/s^2]
@@ -198,7 +210,7 @@ def usv_model():
     #constraint.alat = Function("a_lat", [x, u], [a_lat])
     #constraint.pathlength = pathlength
     #constraint.expr = vertcat(u,v,r,Tport,Tstbd)
-    #constraint.expr = vertcat(distance) #uncomment to avoid 1 obstacle at [4,8]
+    constraint.expr = vertcat(distance1,distance2,distance3,distance4)
 
     # Define model struct
     params = types.SimpleNamespace()
