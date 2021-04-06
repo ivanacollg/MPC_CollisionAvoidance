@@ -105,6 +105,8 @@ class NMPC
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
     ros::Subscriber waypoints_sub;
+    ros::Subscriber right_thruster_sub;
+    ros::Subscriber left_thruster_sub;
 
     unsigned int i,j,ii;
 
@@ -112,6 +114,7 @@ class NMPC
     double ak_des, psisin_des, psicos_des, u_des, v_des, r_des, ye_des;
     double psi_callback, psisin_callback, psicos_callback, u_callback, v_callback, r_callback, past_Tport, past_Tstbd;
     double nedx_callback, nedy_callback;
+    double left_thruster, right_thruster;
     //std_msgs::Float64 right_thruster;
     //std_msgs::Float64 left_thruster;
     //std_msgs::Float64 eu;
@@ -159,6 +162,8 @@ public:
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, &NMPC::velocityCallback, this);
         ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 1000, &NMPC::positionCallback, this);
         waypoints_sub = n.subscribe("/mission/waypoints", 1000, &NMPC::waypointsCallback, this);
+        right_thruster_sub = n.subscribe("/usv_control/controller/right_thruster", 1000, &NMPC::rightThrusterCallback, this);
+        left_thruster_sub = n.subscribe("/usv_control/controller/left_thruster", 1000, &NMPC::leftThrusterCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
@@ -226,6 +231,16 @@ public:
         }
     }
 
+    void leftThrusterCallback(const std_msgs::Float64::ConstPtr& _msg)
+    {
+        left_thruster = _msg->data;
+    }
+
+        void rightThrusterCallback(const std_msgs::Float64::ConstPtr& _msg)
+    {
+        right_thruster = _msg->data;
+    }
+
     void waypoint_manager()
     {
         if (k < (last_waypoints.size())/2)
@@ -290,8 +305,8 @@ public:
             acados_in.x0[ak] = _ak;
             acados_in.x0[nedx] = nedx_callback;
             acados_in.x0[nedy] = nedy_callback;
-            acados_in.x0[Tport] = past_Tport;
-            acados_in.x0[Tstbd] = past_Tstbd;
+            acados_in.x0[Tport] = left_thruster;//past_Tport;
+            acados_in.x0[Tstbd] = right_thruster;//past_Tstbd;
             
             // acados NMPC
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
@@ -347,7 +362,7 @@ public:
             //ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
 
             // get solution at stage N = 1 (as thrust comes from x1 instead of u0 because of the derivative)
-            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 10, "x", (void *)acados_out.x1);
+            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
 
             /*left_thruster.data =  acados_out.x1[Tport];
             right_thruster.data =  acados_out.x1[Tstbd];
@@ -394,7 +409,7 @@ int main(int argc, char **argv)
 
     ros::NodeHandle n("~");
     NMPC nmpc(n);
-    ros::Rate loop_rate(N);
+    ros::Rate loop_rate(50);
     nmpc.last_waypoints.clear();
 
     while(ros::ok()){
