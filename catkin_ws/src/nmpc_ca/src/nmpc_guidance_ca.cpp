@@ -6,6 +6,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Pose2D.h>
+//#include <usv_perception.msg/obstacle_lists.h>
 
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
@@ -25,8 +26,8 @@
 #include "blasfeo/include/blasfeo_d_aux.h"
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
-#include "usv_model_guidance4_model/usv_model_guidance4_model.h"
-#include "acados_solver_usv_model_guidance4.h"
+#include "usv_model_guidance_ca_model/usv_model_guidance_ca_model.h"
+#include "acados_solver_usv_model_guidance_ca.h"
 
 // global data
 ocp_nlp_in * nlp_in;
@@ -51,13 +52,17 @@ using std::showpos;
 // Number of intervals in the horizon
 #define N 100
 // Number of differential state variables
-#define NX 4
+#define NX 9
 // Number of control inputs
 #define NU 1
 // Number of measurements/references on nodes 0..N-1
-#define NY 5
+#define NY 10
 // Number of measurements/references on node N
-#define NYN 4
+#define NYN 9
+// Number of obstacles allowed times 2 (x,y)
+#define XYOBS 16
+// Number of obstalces
+#define OBS 8
 
 class NMPC
     {
@@ -65,28 +70,37 @@ class NMPC
         u = 0,
         v = 1,
         ye = 2,
-        chie = 3
+        chie = 3,
+        psied = 4,
+        xned = 5,
+        yned = 6,
+        psi = 7,
+        psieddot = 8
     };
 
     enum controlInputs{
-        psied = 0
+        psieddotdot = 0
     };
 
     struct solver_output{
         double u0[NU];
+        double x1[NX];
     };
 
     struct solver_input{
         double x0[NX];
         double yref[NY];
         double yref_e[NYN];
+        double p_obs[XYOBS];
+        double r_oobs[OBS];
     };
 
     // publishers and subscribers
     ros::Publisher desired_speed_pub;
     ros::Publisher cross_track_error_pub;
     ros::Publisher desired_heading_pub;
-
+    ros::Publisher desired_r_pub;
+    
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
     ros::Subscriber waypoints_sub;
@@ -94,12 +108,13 @@ class NMPC
     unsigned int i,j,ii;
 
     // global variables
-    double u_des, v_des, ye_des, chie_des;
+    double u_des, v_des, ye_des, chie_des, psied_des;
     double u_callback, v_callback;
-    double nedx_callback, nedy_callback, psi_callback;
+    double nedx_callback, nedy_callback;
     std_msgs::Float64 eye;
     std_msgs::Float64 d_heading;
     std_msgs::Float64 d_speed;
+    std_msgs::Float64 d_r;
  
     // acados struct
     solver_input acados_in;
@@ -113,6 +128,9 @@ public:
     std::vector<double> waypoints;
     std::vector<double> last_waypoints;
     int k;
+    float past_psied;
+    float past_psieddot;
+    double psi_callback;
 
     NMPC(ros::NodeHandle& n)
     {
@@ -131,6 +149,7 @@ public:
         target_pub = n.advertise<geometry_msgs::Pose2D>("/guidance/target", 1);
         desired_speed_pub = n.advertise<std_msgs::Float64>("/guidance/desired_speed", 1);
         desired_heading_pub = n.advertise<std_msgs::Float64>("/guidance/desired_heading", 1);
+        desired_r_pub = n.advertise<std_msgs::Float64>("/guidance/desired_r", 1);
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
@@ -145,6 +164,9 @@ public:
         v_des = 0.0;
         ye_des = 0.0;
         chie_des = 0.0;
+        psied_des = 0.0;
+        past_psied = 0.0;//-M_PI/2;
+        past_psieddot = 0;
 
         // Initialize state variables
         nedx_callback = 0.0;
@@ -157,6 +179,7 @@ public:
         acados_in.x0[v] = 0.0;
         acados_in.x0[ye] = 0.0;
         acados_in.x0[chie] = 0.0;
+        acados_in.x0[psied] = 0.0;
 
         waypoints.clear();
         last_waypoints.clear();
@@ -239,11 +262,18 @@ public:
             double chie_new = psi_callback + beta - _ak;
             if (fabs(chie_new) > M_PI){
               chie_new = (chie_new/fabs(chie_new))*(fabs(chie_new) - 2*M_PI);
-            }
+            } 
+            
             acados_in.x0[u] = u_callback;
             acados_in.x0[v] = v_callback;
             acados_in.x0[ye] = _ye;
             acados_in.x0[chie] = chie_new;
+            acados_in.x0[psied] = past_psied;
+            acados_in.x0[xned] = nedx_callback;
+            acados_in.x0[yned] = nedy_callback;
+            acados_in.x0[psi] = psi_callback;
+            acados_in.x0[psieddot] = past_psieddot;
+            
             
             // acados NMPC
             ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", acados_in.x0);
@@ -251,16 +281,26 @@ public:
 
             ye_des = 0.00;
 
-            acados_in.yref[0] = u_des;         // u
-            acados_in.yref[1] = v_des;         // v
-            acados_in.yref[2] = ye_des;         // ye
-            acados_in.yref[3] = chie_des;         // chie
-            acados_in.yref[4] = 0.00;          // psied
+            acados_in.yref[u] = u_des;         // u
+            acados_in.yref[v] = v_des;         // v
+            acados_in.yref[ye] = ye_des;         // ye
+            acados_in.yref[chie] = chie_des;         // chie
+            acados_in.yref[psied] = psied_des;         // psied
+            acados_in.yref[xned] = 0.0;
+            acados_in.yref[yned] = 0.0;
+            acados_in.yref[psi] = 0.0;
+            acados_in.yref[psieddot] = 0.0;
+            acados_in.yref[9] = 0.00;          // psieddotdot
 
-            acados_in.yref_e[0] = u_des;         // u
-            acados_in.yref_e[1] = v_des;         // v
-            acados_in.yref_e[2] = ye_des;         // ye
-            acados_in.yref_e[3] = chie_des;         // chie
+            acados_in.yref_e[u] = u_des;         // u
+            acados_in.yref_e[v] = v_des;         // v
+            acados_in.yref_e[ye] = ye_des;         // ye
+            acados_in.yref_e[chie] = chie_des;         // chie
+            acados_in.yref_e[psied] = psied_des;         // psied
+            acados_in.yref_e[xned] = 0.0;
+            acados_in.yref_e[yned] = 0.0;
+            acados_in.yref_e[psi] = 0.0;
+            acados_in.yref_e[psieddot] = 0.0;
 
             for (ii = 0; ii < N; ii++)
                 {
@@ -278,13 +318,18 @@ public:
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
 
             // get solution at stage N = 1 (as thrust comes from x1 instead of u0 because of the derivative)
-            //ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
-            float psid = acados_out.u0[psied] + _ak;
+            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 2, "x", (void *)acados_out.x1);
+            float psid = acados_out.x1[psied] + _ak;
+            std::cout<<"psieddot: "<< acados_out.u0[psieddot]<<".\n";
+            std::cout<<"psied: "<< acados_out.x1[psied]<<".\n";
             if (fabs(psid) > M_PI){
               psid = (psid/fabs(psid))*(fabs(psid) - 2*M_PI);
             }
+            past_psied = acados_out.x1[psied];
             d_heading.data = psid;
-            desired_heading_pub.publish(d_heading); 
+            desired_heading_pub.publish(d_heading);
+            //d_r.data = acados_out.u0[psieddot];
+            //desired_r_pub.publish(d_r);
             desired_speed_pub.publish(d_speed);
             eye.data = _ye;
             cross_track_error_pub.publish(eye);
@@ -295,11 +340,11 @@ public:
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "nmpc_guidance4");
+    ros::init(argc, argv, "nmpc_guidance_ca");
 
     ros::NodeHandle n("~");
     NMPC nmpc(n);
-    ros::Rate loop_rate(N);
+    ros::Rate loop_rate(20);
     nmpc.last_waypoints.clear();
 
     while(ros::ok()){
@@ -312,6 +357,13 @@ int main(int argc, char **argv)
             nmpc.waypoint_path.x = x1;
             nmpc.waypoint_path.y = y1;
             nmpc.target_pub.publish(nmpc.waypoint_path);
+            double x2 = nmpc.last_waypoints[2];
+            double y2 = nmpc.last_waypoints[3];
+            double ak = atan2(y2-y1, x2-x1);
+            nmpc.past_psied = nmpc.psi_callback - ak;
+            if (fabs(nmpc.past_psied) > M_PI){
+              nmpc.past_psied = (nmpc.past_psied/fabs(nmpc.past_psied))*(fabs(nmpc.past_psied) - 2*M_PI);
+            }
         }
         
         nmpc.waypoint_manager();
