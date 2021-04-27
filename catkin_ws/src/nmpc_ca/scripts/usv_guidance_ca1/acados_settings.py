@@ -109,12 +109,14 @@ def acados_settings(Tf, N):
 
     # set intial references
     ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
-    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0])
 
     # setting constraints
-    ocp.constraints.lbx = np.array([model.psieddot_min])
-    ocp.constraints.ubx = np.array([model.psieddot_max])
-    ocp.constraints.idxbx = np.array([8])
+    #ocp.constraints.lbx = np.array([model.psieddot_min])
+    #ocp.constraints.ubx = np.array([model.psieddot_max])
+    #ocp.constraints.idxbx = np.array([8])
+    ocp.constraints.lbu = np.array([model.Upsieddot_min])
+    ocp.constraints.ubu = np.array([model.Upsieddot_max])
     ocp.constraints.idxbu = np.array([0])
 
     # ocp.constraints.lsbx=np.zero s([1])

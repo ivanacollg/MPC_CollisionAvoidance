@@ -74,12 +74,11 @@ class NMPC
         psied = 4,
         xned = 5,
         yned = 6,
-        psi = 7,
-        psieddot = 8
+        psi = 7
     };
 
     enum controlInputs{
-        psieddotdot = 0
+        psieddot = 0
     };
 
     struct solver_output{
@@ -272,7 +271,6 @@ public:
             acados_in.x0[xned] = nedx_callback;
             acados_in.x0[yned] = nedy_callback;
             acados_in.x0[psi] = psi_callback;
-            acados_in.x0[psieddot] = past_psieddot;
             
             
             // acados NMPC
@@ -290,7 +288,6 @@ public:
             acados_in.yref[yned] = 0.0;
             acados_in.yref[psi] = 0.0;
             acados_in.yref[psieddot] = 0.0;
-            acados_in.yref[9] = 0.00;          // psieddotdot
 
             acados_in.yref_e[u] = u_des;         // u
             acados_in.yref_e[v] = v_des;         // v
@@ -300,7 +297,6 @@ public:
             acados_in.yref_e[xned] = 0.0;
             acados_in.yref_e[yned] = 0.0;
             acados_in.yref_e[psi] = 0.0;
-            acados_in.yref_e[psieddot] = 0.0;
 
             for (ii = 0; ii < N; ii++)
                 {
@@ -318,7 +314,7 @@ public:
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", (void *)acados_out.u0);
 
             // get solution at stage N = 1 (as thrust comes from x1 instead of u0 because of the derivative)
-            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 2, "x", (void *)acados_out.x1);
+            ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
             float psid = acados_out.x1[psied] + _ak;
             std::cout<<"psieddot: "<< acados_out.u0[psieddot]<<".\n";
             std::cout<<"psied: "<< acados_out.x1[psied]<<".\n";

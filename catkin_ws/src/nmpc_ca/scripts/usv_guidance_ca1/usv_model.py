@@ -121,7 +121,7 @@ def usv_model():
       0,
       u*sin(psie) + v*cos(psie),
       (psied-psie)/T1,
-      psieddot,
+      Upsieddot,
       u*cos(psi) - v*sin(psi),
       u*sin(psi) + v*cos(psi),
       (psied-psie)/T1,
@@ -151,8 +151,8 @@ def usv_model():
     model.psieddot_min = -1#-0.25 # minimum desired angle rate
     model.psieddot_max = 1#0.25 # maximum desired angle rate
 
-    #model.psieddotdot_min = -1#-0.25 # minimum desired angle rate
-    #model.psieddotdot_max = 1#0.25 # maximum desired angle rate
+    model.Upsieddot_min = -1#-0.25 # minimum desired angle rate
+    model.Upsieddot_max = 1#0.25 # maximum desired angle rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
