@@ -52,13 +52,13 @@ using std::showpos;
 // Number of intervals in the horizon
 #define N 100
 // Number of differential state variables
-#define NX 9
+#define NX 8
 // Number of control inputs
 #define NU 1
 // Number of measurements/references on nodes 0..N-1
-#define NY 10
+#define NY 9
 // Number of measurements/references on node N
-#define NYN 9
+#define NYN 8
 // Number of obstacles allowed times 2 (x,y)
 #define XYOBS 16
 // Number of obstalces

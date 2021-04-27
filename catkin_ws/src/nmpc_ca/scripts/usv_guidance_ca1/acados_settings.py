@@ -75,7 +75,7 @@ def acados_settings(Tf, N):
     Q = np.diag([0, 0, 0.05, 0.025, 0, 0, 0, 0])
     
     R = np.eye(nu)
-    R[0, 0] = 0.0
+    R[0, 0] = 0.01
 
     Qe = np.diag([0, 0, 0.1, 0.05, 0, 0, 0, 0])
 
