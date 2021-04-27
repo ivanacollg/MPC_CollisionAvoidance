@@ -70,8 +70,8 @@ simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
 simError = np.ndarray((Nsim, 3))
 
-obsx = np.array([3,4,3.7,4.4])
-obsy = np.array([3,8,16,20])
+obsx = np.array([4,4,4,4])
+obsy = np.array([4,8,12,20])
 radius = 0.5
 pobs = np.ones(16)*100
 robs = np.zeros(8)
@@ -123,11 +123,11 @@ for i in range(Nsim):
     for j in range(N):
         yref=np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-        acados_solver.set(j, "p", pobs)
-        acados_solver.constraints_set(j, "lh", robs)
+        #acados_solver.set(j, "p", pobs)
+        #acados_solver.constraints_set(j, "lh", robs)
     yref_N = np.array([0, 0, 0, 0, 0, 0, 0, 0])
     acados_solver.set(N, "yref", yref_N)
-    acados_solver.set(N, "p", pobs)
+    #acados_solver.set(N, "p", pobs)
 
     # solve ocp
     t = time.time()
