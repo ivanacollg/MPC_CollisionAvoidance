@@ -91,7 +91,7 @@ class NMPC
         double yref[NY];
         double yref_e[NYN];
         double p_obs[XYOBS];
-        double r_oobs[OBS];
+        double r_obs[OBS];
     };
 
     // publishers and subscribers
@@ -298,11 +298,40 @@ public:
             acados_in.yref_e[yned] = 0.0;
             acados_in.yref_e[psi] = 0.0;
 
+            acados_in.p_obs[0] = 4;
+            acados_in.p_obs[1] = 25;
+            acados_in.p_obs[2] = 4;
+            acados_in.p_obs[3] = 8;
+            acados_in.p_obs[4] = 4;
+            acados_in.p_obs[5] = 12;
+            acados_in.p_obs[6] = 4;
+            acados_in.p_obs[7] = 20;
+            acados_in.p_obs[8] = 100;
+            acados_in.p_obs[9] = 100;
+            acados_in.p_obs[10] = 100;
+            acados_in.p_obs[11] = 100;
+            acados_in.p_obs[12] = 100;
+            acados_in.p_obs[13] = 100;
+            acados_in.p_obs[14] = 100;
+            acados_in.p_obs[15] = 100;
+
+            acados_in.r_obs[0] = 0.5;
+            acados_in.r_obs[1] = 0.2;
+            acados_in.r_obs[2] = 0.5;
+            acados_in.r_obs[3] = 0.5;
+            acados_in.r_obs[4] = 0.5;
+            acados_in.r_obs[5] = 0.5;
+            acados_in.r_obs[6] = 0.5;
+            acados_in.r_obs[7] = 0.5;
+
             for (ii = 0; ii < N; ii++)
                 {
                 ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "yref", acados_in.yref);
+                acados_update_params( ii, acados_in.p_obs, 16);
+                ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, ii, "lh", acados_in.r_obs);
                 }
             ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);
+            acados_update_params( ii, acados_in.p_obs, 16);
 
             // call solver
             acados_status = acados_solve();

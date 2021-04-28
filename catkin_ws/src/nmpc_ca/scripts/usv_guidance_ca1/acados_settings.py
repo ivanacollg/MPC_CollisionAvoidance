@@ -153,7 +153,8 @@ def acados_settings(Tf, N):
     # set intial condition
     ocp.constraints.x0 = model.x0
 
-    ocp.parameter_values = np.array([4,4,4,8,4,12,4,20,100,100,100,100,100,100,100,100])
+    #ocp.parameter_values = np.array([4,4,4,8,4,12,4,20,100,100,100,100,100,100,100,100])
+    ocp.parameter_values = np.array([100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100])
 
     # set QP solver and integration
     ocp.solver_options.tf = Tf

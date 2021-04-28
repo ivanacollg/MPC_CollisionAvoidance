@@ -123,11 +123,11 @@ for i in range(Nsim):
     for j in range(N):
         yref=np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
-        #acados_solver.set(j, "p", pobs)
-        #acados_solver.constraints_set(j, "lh", robs)
+        acados_solver.set(j, "p", pobs)
+        acados_solver.constraints_set(j, "lh", robs)
     yref_N = np.array([0, 0, 0, 0, 0, 0, 0, 0])
     acados_solver.set(N, "yref", yref_N)
-    #acados_solver.set(N, "p", pobs)
+    acados_solver.set(N, "p", pobs)
 
     # solve ocp
     t = time.time()
