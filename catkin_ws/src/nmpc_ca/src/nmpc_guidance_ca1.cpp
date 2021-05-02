@@ -315,10 +315,10 @@ public:
             acados_in.p_obs[14] = 100;
             acados_in.p_obs[15] = 100;
 
-            acados_in.r_obs[0] = 1.0;
-            acados_in.r_obs[1] = 1.0;
-            acados_in.r_obs[2] = 1.0;
-            acados_in.r_obs[3] = 1.0;
+            acados_in.r_obs[0] = 1.5;
+            acados_in.r_obs[1] = 1.5;
+            acados_in.r_obs[2] = 1.5;
+            acados_in.r_obs[3] = 1.5;
             acados_in.r_obs[4] = 0.0;
             acados_in.r_obs[5] = 0.0;
             acados_in.r_obs[6] = 0.0;

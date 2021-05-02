@@ -68,16 +68,16 @@ def acados_settings(Tf, N):
     ny_e = nx
 
     ocp.dims.N = N
-    #ns = 2
-    #nsh = 2
+    ns = 8
+    nsh = 8
 
     # set cost
-    Q = np.diag([0, 0, 0.05, 0.015, 0, 0, 0, 0])
+    Q = np.diag([0, 0, 0.05, 0.005, 0, 0, 0, 0])
     
     R = np.eye(nu)
     R[0, 0] = 0.2
 
-    Qe = np.diag([0, 0, 0.1, 0.025, 0, 0, 0, 0])
+    Qe = np.diag([0, 0, 0.1, 0.010, 0, 0, 0, 0])
 
 
     ocp.cost.cost_type = "LINEAR_LS"
@@ -101,12 +101,12 @@ def acados_settings(Tf, N):
     Vx_e = np.zeros((ny_e, nx))
     Vx_e[:nx, :nx] = np.eye(nx)
     ocp.cost.Vx_e = Vx_e
-
-    '''ocp.cost.zl = 0 * np.ones((ns,)) #previously 100
+    
+    ocp.cost.zl = 100 * np.ones((ns,)) #previously 100
     ocp.cost.Zl = 0 * np.ones((ns,))
-    ocp.cost.zu = 0 * np.ones((ns,)) #previously 100
-    ocp.cost.Zu = 0 * np.ones((ns,))'''
-
+    ocp.cost.zu = 100 * np.ones((ns,)) #previously 100
+    ocp.cost.Zu = 0 * np.ones((ns,))
+    
     # set intial references
     ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
     ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0])
@@ -122,6 +122,7 @@ def acados_settings(Tf, N):
     # ocp.constraints.lsbx=np.zero s([1])
     # ocp.constraints.usbx=np.zeros([1])
     # ocp.constraints.idxsbx=np.array([1])
+
     ocp.constraints.lh = np.array(
         [
              constraint.distance_min,
@@ -149,6 +150,33 @@ def acados_settings(Tf, N):
     '''ocp.constraints.lsh = np.zeros(nsh)
     ocp.constraints.ush = np.zeros(nsh)
     ocp.constraints.idxsh = np.array([0, 2])'''
+    
+    ocp.constraints.lsh = np.array(
+        [
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2
+        ]
+    )
+    ocp.constraints.ush = np.array(
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ) 
+    ocp.constraints.idxsh = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+    
 
     # set intial condition
     ocp.constraints.x0 = model.x0
