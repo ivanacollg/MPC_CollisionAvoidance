@@ -72,7 +72,7 @@ simError = np.ndarray((Nsim, 3))
 
 obsx = np.array([4,4,4,4])
 obsy = np.array([4,8,12,20])
-radius = 0.5
+radius = np.array([1.0,1.0,1.0,1.0,0,0,0,0]) #0.5
 pobs = np.ones(16)*100
 robs = np.zeros(8)
 
@@ -119,7 +119,7 @@ for i in range(Nsim):
     for ii in range(len(obsx)):
         pobs[2*ii] = obsx[ii]
         pobs[2*ii+1] = obsy[ii]
-        robs[ii] = radius + 0.2
+        robs[ii] = radius[ii] + 0.2
     for j in range(N):
         yref=np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)

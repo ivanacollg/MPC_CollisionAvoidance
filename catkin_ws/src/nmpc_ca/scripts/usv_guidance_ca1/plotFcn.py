@@ -137,7 +137,7 @@ def plotRes(simX,simU, simError, obsx, obsy, radius, t):
     plt.plot(simX[:,6:7], simX[:,5:6])
     ax = fig.gca()
     for j in range(len(obsx)):
-        c = plt.Circle((obsy[j],obsx[j]),radius)
+        c = plt.Circle((obsy[j],obsx[j]),radius[j])
         ax.add_patch(c)
     plt.ylabel('x')
     plt.xlabel('y')
