@@ -69,7 +69,7 @@ class ObstacleSimulator:
             delta_y = y - self.ned_y
             distance = math.pow(delta_x*delta_x + delta_y*delta_y, 0.5)
             if (distance < self.max_visible_radius):
-                # x, y = self.ned_to_body(x, y)
+                x, y = self.ned_to_body(x, y)
                 #if x > -0.5:
                 obstacle = Vector3()
                 obstacle.x = x
@@ -165,21 +165,21 @@ def main():
 
 
         obstacleSimulator.obstacle_list.append({'X' : 4.0,
-                                    'Y' : -3.0,
-                                    'R' : 1.5})
+                                    'Y' : 4.0,
+                                    'R' : 1.0})
 
-        # obstacleSimulator.obstacle_list.append({'X' : 5.0,
-        #                             'Y' : -1.0,
-        #                             'R' : 0.2})
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : 8.0,
+                                     'R' : 0.5})
 
-        obstacleSimulator.obstacle_list.append({'X' : 7.0,
-                                    'Y' : -6.0,
-                                    'R' : 0.5})
-        '''
-        obstacleSimulator.obstacle_list.append({'X' : 10.0,
-                                    'Y' : 0.0,
-                                    'R' : 0.2})
-        '''
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : 12.0,
+                                    'R' : 1.0})
+        
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : 20.0,
+                                    'R' : 1.0})
+        
     elif obstacleSimulator.challenge == 1:
 
         obstacleSimulator.obstacle_list.append({'X' : 3.1,

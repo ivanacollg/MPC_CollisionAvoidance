@@ -6,7 +6,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Pose2D.h>
-//#include <usv_perception.msg/obstacle_lists.h>
+#include <simulation/obstacles_list.h>
 
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
@@ -28,6 +28,15 @@
 
 #include "usv_model_guidance_ca1_model/usv_model_guidance_ca1_model.h"
 #include "acados_solver_usv_model_guidance_ca1.h"
+
+/**
+ * Represents a 3x3 matrix
+ * */
+typedef Eigen::Matrix<double, 3, 3> xMatrix3;
+/**
+ * Represents a 3x1 vector
+ * */
+typedef Eigen::Matrix<double, 3, 1> xVector3;
 
 // global data
 ocp_nlp_in * nlp_in;
@@ -103,6 +112,7 @@ class NMPC
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
     ros::Subscriber waypoints_sub;
+    ros::Subscriber obstacles_sub;
 
     unsigned int i,j,ii;
 
@@ -114,6 +124,12 @@ class NMPC
     std_msgs::Float64 d_heading;
     std_msgs::Float64 d_speed;
     std_msgs::Float64 d_r;
+
+    /**
+    * Obstacle list vector
+    * */
+    std::vector<Eigen::Vector3f> obstacles_list_;
+    const double boat_radius_ = 0.5;
  
     // acados struct
     solver_input acados_in;
@@ -154,6 +170,7 @@ public:
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
         ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 5, &NMPC::positionCallback, this);
         waypoints_sub = n.subscribe("/mission/waypoints", 5, &NMPC::waypointsCallback, this);
+        obstacles_sub = n.subscribe("/usv_perception/lidar_detector/obstacles",  5, &NMPC::obstaclesCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
@@ -179,6 +196,9 @@ public:
         acados_in.x0[ye] = 0.0;
         acados_in.x0[chie] = 0.0;
         acados_in.x0[psied] = 0.0;
+
+        //Initialize Obstacles
+        initializeObstacles();
 
         waypoints.clear();
         last_waypoints.clear();
@@ -214,6 +234,55 @@ public:
         {
             waypoints.push_back(_msg -> data[i]);
         }
+    }
+
+    void obstaclesCallback(const simulation::obstacles_list::ConstPtr& _msg)
+    {
+        Eigen::Vector3f obstacle_body;
+        Eigen::Vector3f obstacle_ned;
+
+        for (int i = 0; i < _msg->len; i++)
+        {
+          double body_x = _msg->obstacles[i].x;
+          double body_y = _msg->obstacles[i].y;
+          double radius = _msg->obstacles[i].z + boat_radius_;
+          obstacle_body << body_x, body_y, 0;
+          obstacle_ned = body2NED(obstacle_body);
+          obstacle_ned(2) = radius;
+          std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
+          obstacles_list_[i] = obstacle_ned;
+        }
+
+    }
+
+    Eigen::Vector3f body2NED(const Eigen::Vector3f _obstacle_body)
+    {
+        Eigen::Matrix3f R;
+        Eigen::Vector3f obstacle_ned;
+        
+        R << cos(psi_callback), -sin(psi_callback), 0.0,
+            sin(psi_callback), cos(psi_callback),  0.0,
+            0.0,               0.0,                1.0;
+        
+        obstacle_ned = R*_obstacle_body;
+
+        obstacle_ned(0) = obstacle_ned(0) + nedx_callback;
+        obstacle_ned(1) = obstacle_ned(1) + nedy_callback;
+        
+        return obstacle_ned;
+    }
+
+    void initializeObstacles()
+    {
+        obstacles_list_.clear();
+        Eigen::Vector3f obstacle;
+        obstacle << 100, 100, 0;
+
+        for(i=0; i<8; i++)
+        {
+          obstacles_list_.push_back(obstacle);
+        }
+
     }
 
     void waypoint_manager()
@@ -298,14 +367,14 @@ public:
             acados_in.yref_e[yned] = 0.0;
             acados_in.yref_e[psi] = 0.0;
 
-            acados_in.p_obs[0]  = 4;
-            acados_in.p_obs[1]  = 8;
-            acados_in.p_obs[2]  = 4;
-            acados_in.p_obs[3]  = 15;
-            acados_in.p_obs[4]  = 4;
-            acados_in.p_obs[5]  = 25;
-            acados_in.p_obs[6]  = 4;
-            acados_in.p_obs[7]  = 35;
+            acados_in.p_obs[0]  = obstacles_list_[0][0];
+            acados_in.p_obs[1]  = obstacles_list_[0][1];
+            acados_in.p_obs[2]  = obstacles_list_[1][0];
+            acados_in.p_obs[3]  = obstacles_list_[1][1];
+            acados_in.p_obs[4]  = obstacles_list_[2][0];
+            acados_in.p_obs[5]  = obstacles_list_[2][1];
+            acados_in.p_obs[6]  = obstacles_list_[3][0];
+            acados_in.p_obs[7]  = obstacles_list_[3][1];
             acados_in.p_obs[8]  = 100;
             acados_in.p_obs[9]  = 100;
             acados_in.p_obs[10] = 100;
@@ -315,10 +384,10 @@ public:
             acados_in.p_obs[14] = 100;
             acados_in.p_obs[15] = 100;
 
-            acados_in.r_obs[0] = 1.5;
-            acados_in.r_obs[1] = 1.5;
-            acados_in.r_obs[2] = 1.5;
-            acados_in.r_obs[3] = 1.5;
+            acados_in.r_obs[0] = obstacles_list_[0][2];
+            acados_in.r_obs[1] = obstacles_list_[1][2];
+            acados_in.r_obs[2] = obstacles_list_[2][2];
+            acados_in.r_obs[3] = obstacles_list_[3][2];
             acados_in.r_obs[4] = 0.0;
             acados_in.r_obs[5] = 0.0;
             acados_in.r_obs[6] = 0.0;
