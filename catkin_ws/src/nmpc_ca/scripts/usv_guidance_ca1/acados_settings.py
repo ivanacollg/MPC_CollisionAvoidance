@@ -102,9 +102,9 @@ def acados_settings(Tf, N):
     Vx_e[:nx, :nx] = np.eye(nx)
     ocp.cost.Vx_e = Vx_e
     
-    ocp.cost.zl = 100 * np.ones((ns,)) #previously 100
+    ocp.cost.zl = 1 * np.ones((ns,)) #previously 100
     ocp.cost.Zl = 0 * np.ones((ns,))
-    ocp.cost.zu = 100 * np.ones((ns,)) #previously 100
+    ocp.cost.zu = 1 * np.ones((ns,)) #previously 100
     ocp.cost.Zu = 0 * np.ones((ns,))
     
     # set intial references
