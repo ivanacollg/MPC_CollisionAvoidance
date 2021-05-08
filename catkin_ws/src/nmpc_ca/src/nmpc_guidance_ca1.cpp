@@ -139,6 +139,7 @@ class NMPC
     const double boat_radius_ = 0.5;
     const unsigned int obs_num_ = 8;
     const unsigned int init_obs_pos_ = 1000;
+    const double safety_radius_ = 0.2;
  
     // acados struct
     solver_input acados_in;
@@ -291,8 +292,16 @@ public:
             obstacle_ned(2) = radius;
             //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
             obstacles_list_[i] = obstacle_ned;
-            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2), "obstacle_circle", i);
-            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2) + 0.2, "obstacle_circle", i+8);
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2), 
+                       "obstacle_circle", 
+                       i);
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2) + safety_radius_, 
+                       "obstacle_circle", 
+                       i + obs_num_);
           }
         }
 
@@ -313,8 +322,16 @@ public:
             obstacle_ned(2) = radius;
             //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
             obstacles_list_[i] = obstacle_ned;
-            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2), "obstacle_circle", i);
-            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2) + 0.2, "obstacle_circle", i + obs_num_);
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2), 
+                       "obstacle_circle", 
+                       i);
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2) + safety_radius_, 
+                       "obstacle_circle", 
+                       i + obs_num_);
           }
         }
 
