@@ -179,6 +179,26 @@ def main():
         obstacleSimulator.obstacle_list.append({'X' : 4.0,
                                     'Y' : 20.0,
                                     'R' : 1.0})
+
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : -4.0,
+                                    'R' : 1.0})
+
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : -8.0,
+                                     'R' : 0.5})
+
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : -12.0,
+                                    'R' : 1.0})
+        
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : -20.0,
+                                    'R' : 1.0})
+
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : 30.0,
+                                    'R' : 1.0})
         
     elif obstacleSimulator.challenge == 1:
 

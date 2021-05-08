@@ -130,6 +130,8 @@ class NMPC
     * */
     std::vector<Eigen::Vector3f> obstacles_list_;
     const double boat_radius_ = 0.5;
+    const unsigned int obs_num_ = 8;
+    const unsigned int init_obs_pos_ = 1000;
  
     // acados struct
     solver_input acados_in;
@@ -241,16 +243,65 @@ public:
         Eigen::Vector3f obstacle_body;
         Eigen::Vector3f obstacle_ned;
 
-        for (int i = 0; i < _msg->len; i++)
+        // If there are more obstacles than MPC algorithim can handle
+        if (_msg->len > obs_num_)
         {
-          double body_x = _msg->obstacles[i].x;
-          double body_y = _msg->obstacles[i].y;
-          double radius = _msg->obstacles[i].z + boat_radius_;
-          obstacle_body << body_x, body_y, 0;
-          obstacle_ned = body2NED(obstacle_body);
-          obstacle_ned(2) = radius;
-          std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
-          obstacles_list_[i] = obstacle_ned;
+          Eigen::VectorXd obstacle_distances(_msg->len);
+
+          // Calculate the distance to all obstacles
+          for (int i = 0; i < _msg->len; i++)
+          {
+            double body_x = _msg->obstacles[i].x;
+            double body_y = _msg->obstacles[i].y;
+            double radius = _msg->obstacles[i].z + boat_radius_;
+            double distance =  sqrt(body_x*body_x + body_y*body_y) - boat_radius_;
+            obstacle_distances(i) = distance;
+          }
+
+          // Sort obstacles in terms of ditances (closest to farthest)
+          Eigen::VectorXi index_vec;
+          Eigen::VectorXd sorted_vec;
+          sort_vec(obstacle_distances,sorted_vec,index_vec);
+          /*std::cout<<"Original Vector: \n";
+          std::cout<<obstacle_distances<<std::endl<<std::endl;
+          std::cout<<"After sorting: \n";
+          std::cout<<sorted_vec<<std::endl<<std::endl;
+          std::cout<<"Positioning the position in the original vector corresponding to each element of the vector"<<endl;
+          std::cout<<index_vec<<std::endl;*/
+
+          // Use only 8 closest obstacles
+          for (int i = 0; i < obs_num_; i++)
+          {
+            int index = index_vec[i];
+            double body_x = _msg->obstacles[index].x;
+            double body_y = _msg->obstacles[index].y;
+            double radius = _msg->obstacles[index].z + boat_radius_;
+            obstacle_body << body_x, body_y, 0;
+            obstacle_ned = body2NED(obstacle_body);
+            obstacle_ned(2) = radius;
+            //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
+            obstacles_list_[i] = obstacle_ned;
+          }
+        }
+
+        // If MPC can handle # of obstacles
+        else
+        {
+          // Initialize obstalces to a far distance with 0 radius
+          initializeObstacles();
+
+          // Obstain obstacle values
+          for (int i = 0; i < _msg->len; i++)
+          {
+            double body_x = _msg->obstacles[i].x;
+            double body_y = _msg->obstacles[i].y;
+            double radius = _msg->obstacles[i].z + boat_radius_;
+            obstacle_body << body_x, body_y, 0;
+            obstacle_ned = body2NED(obstacle_body);
+            obstacle_ned(2) = radius;
+            //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
+            obstacles_list_[i] = obstacle_ned;
+          }
         }
 
     }
@@ -276,7 +327,7 @@ public:
     {
         obstacles_list_.clear();
         Eigen::Vector3f obstacle;
-        obstacle << 100, 100, 0;
+        obstacle << init_obs_pos_, init_obs_pos_, 0;
 
         for(i=0; i<8; i++)
         {
@@ -284,6 +335,30 @@ public:
         }
 
     }
+
+    /** sorts vectors from large to small
+     * vec: vector to be sorted
+     * sorted_vec: sorted results
+     * ind: the position of each element in the sort result in the original vector
+    */
+    void sort_vec(const VectorXd& vec, VectorXd& sorted_vec,  VectorXi& index){
+      index = VectorXi::LinSpaced(vec.size(),0,vec.size()-1);//[0 1 2 3 ... N-1]
+
+      auto rule=[vec](int i, int j)->bool
+      {
+        return vec(i)<vec(j);
+      };// regular expression, as a predicate of sort
+
+      std::sort(index.data(),index.data()+index.size(),rule);
+      //The data member function returns a pointer to the first element of 
+      //VectorXd, similar to begin()
+      sorted_vec.resize(vec.size());
+
+      for(int i=0;i<vec.size();i++){
+        sorted_vec(i)=vec(index(i));
+      }
+    }
+
 
     void waypoint_manager()
     {
@@ -375,23 +450,23 @@ public:
             acados_in.p_obs[5]  = obstacles_list_[2][1];
             acados_in.p_obs[6]  = obstacles_list_[3][0];
             acados_in.p_obs[7]  = obstacles_list_[3][1];
-            acados_in.p_obs[8]  = 100;
-            acados_in.p_obs[9]  = 100;
-            acados_in.p_obs[10] = 100;
-            acados_in.p_obs[11] = 100;
-            acados_in.p_obs[12] = 100;
-            acados_in.p_obs[13] = 100;
-            acados_in.p_obs[14] = 100;
-            acados_in.p_obs[15] = 100;
+            acados_in.p_obs[8]  = obstacles_list_[4][0];
+            acados_in.p_obs[9]  = obstacles_list_[4][1];
+            acados_in.p_obs[10] = obstacles_list_[5][0];
+            acados_in.p_obs[11] = obstacles_list_[5][1];
+            acados_in.p_obs[12] = obstacles_list_[6][0];
+            acados_in.p_obs[13] = obstacles_list_[6][1];
+            acados_in.p_obs[14] = obstacles_list_[7][0];
+            acados_in.p_obs[15] = obstacles_list_[7][1];
 
             acados_in.r_obs[0] = obstacles_list_[0][2];
             acados_in.r_obs[1] = obstacles_list_[1][2];
             acados_in.r_obs[2] = obstacles_list_[2][2];
             acados_in.r_obs[3] = obstacles_list_[3][2];
-            acados_in.r_obs[4] = 0.0;
-            acados_in.r_obs[5] = 0.0;
-            acados_in.r_obs[6] = 0.0;
-            acados_in.r_obs[7] = 0.0;
+            acados_in.r_obs[4] = obstacles_list_[4][2];
+            acados_in.r_obs[5] = obstacles_list_[5][2];
+            acados_in.r_obs[6] = obstacles_list_[6][2];
+            acados_in.r_obs[7] = obstacles_list_[7][2];
 
             for (ii = 0; ii < N; ii++)
                 {
