@@ -141,9 +141,9 @@ class ObstacleSimulator:
             marker.header.frame_id = "/world"
             marker.type = marker.SPHERE
             marker.action = marker.ADD
-            marker.scale.x = radius 
-            marker.scale.y = radius 
-            marker.scale.z = radius 
+            marker.scale.x = 2*radius 
+            marker.scale.y = 2*radius 
+            marker.scale.z = 2*radius 
             marker.color.a = 1.0
             marker.color.r = 1.0
             marker.color.g = 1.0
@@ -168,27 +168,27 @@ def main():
                                     'Y' : 4.0,
                                     'R' : 1.0})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 4.5,
                                     'Y' : 8.0,
                                      'R' : 0.5})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 3.7,
                                     'Y' : 12.0,
                                     'R' : 1.0})
         
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 4.2,
                                     'Y' : 20.0,
                                     'R' : 1.0})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 4.8,
                                     'Y' : -4.0,
                                     'R' : 1.0})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 5.0,
                                     'Y' : -8.0,
                                      'R' : 0.5})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 4.3,
                                     'Y' : -12.0,
                                     'R' : 1.0})
         
@@ -196,10 +196,11 @@ def main():
                                     'Y' : -20.0,
                                     'R' : 1.0})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+        obstacleSimulator.obstacle_list.append({'X' : 3.5,
                                     'Y' : 30.0,
                                     'R' : 1.0})
         
+
     elif obstacleSimulator.challenge == 1:
 
         obstacleSimulator.obstacle_list.append({'X' : 3.1,

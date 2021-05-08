@@ -6,6 +6,8 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Pose2D.h>
+#include <visualization_msgs/Marker.h>
+
 #include <simulation/obstacles_list.h>
 
 #include <eigen3/Eigen/Dense>
@@ -108,6 +110,7 @@ class NMPC
     ros::Publisher cross_track_error_pub;
     ros::Publisher desired_heading_pub;
     ros::Publisher desired_r_pub;
+    ros::Publisher marker_pub;
     
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
@@ -124,6 +127,10 @@ class NMPC
     std_msgs::Float64 d_heading;
     std_msgs::Float64 d_speed;
     std_msgs::Float64 d_r;
+    /**
+    * Safety visualization Markers
+    * */
+    visualization_msgs::Marker marker;
 
     /**
     * Obstacle list vector
@@ -167,6 +174,7 @@ public:
         desired_speed_pub = n.advertise<std_msgs::Float64>("/guidance/desired_speed", 1);
         desired_heading_pub = n.advertise<std_msgs::Float64>("/guidance/desired_heading", 1);
         desired_r_pub = n.advertise<std_msgs::Float64>("/guidance/desired_r", 1);
+        marker_pub = n.advertise<visualization_msgs::Marker>("/nmpc_ca/safety_vizualization", 1);
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 5, &NMPC::velocityCallback, this);
@@ -225,6 +233,8 @@ public:
         nedx_callback = _pos->x;
         nedy_callback = _pos->y;
         psi_callback = _pos->theta;
+
+        circleDraw(nedx_callback, nedy_callback, boat_radius_, "boat_pose", 0);
     }
 
     void waypointsCallback(const std_msgs::Float32MultiArray::ConstPtr& _msg)
@@ -254,14 +264,14 @@ public:
             double body_x = _msg->obstacles[i].x;
             double body_y = _msg->obstacles[i].y;
             double radius = _msg->obstacles[i].z + boat_radius_;
-            double distance =  sqrt(body_x*body_x + body_y*body_y) - boat_radius_;
+            double distance =  sqrt(body_x*body_x + body_y*body_y) - radius;
             obstacle_distances(i) = distance;
           }
 
           // Sort obstacles in terms of ditances (closest to farthest)
           Eigen::VectorXi index_vec;
           Eigen::VectorXd sorted_vec;
-          sort_vec(obstacle_distances,sorted_vec,index_vec);
+          sortVec(obstacle_distances,sorted_vec,index_vec);
           /*std::cout<<"Original Vector: \n";
           std::cout<<obstacle_distances<<std::endl<<std::endl;
           std::cout<<"After sorting: \n";
@@ -281,6 +291,8 @@ public:
             obstacle_ned(2) = radius;
             //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
             obstacles_list_[i] = obstacle_ned;
+            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2), "obstacle_circle", i);
+            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2) + 0.2, "obstacle_circle", i+8);
           }
         }
 
@@ -301,6 +313,8 @@ public:
             obstacle_ned(2) = radius;
             //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
             obstacles_list_[i] = obstacle_ned;
+            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2), "obstacle_circle", i);
+            circleDraw(obstacle_ned(0), obstacle_ned(1), obstacle_ned(2) + 0.2, "obstacle_circle", i + obs_num_);
           }
         }
 
@@ -329,19 +343,58 @@ public:
         Eigen::Vector3f obstacle;
         obstacle << init_obs_pos_, init_obs_pos_, 0;
 
-        for(i=0; i<8; i++)
+        for(i=0; i<obs_num_; i++)
         {
           obstacles_list_.push_back(obstacle);
         }
 
     }
 
+    void circleDraw(double h, double k, double r, std::string ns, int i)
+    {
+      marker.header.frame_id = "/world";
+      marker.header.stamp = ros::Time::now();
+      marker.ns = ns;
+      marker.id = i;
+      marker.type = visualization_msgs::Marker::LINE_STRIP;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.pose.position.x = h;
+      marker.pose.position.y = -k;
+      marker.pose.position.z = 0;
+      marker.pose.orientation.x = 0.0;
+      marker.pose.orientation.y = 0.0;
+      marker.pose.orientation.z = 0.0;
+      marker.pose.orientation.w = 1.0;
+      marker.color.b = 0.5;
+      marker.color.a = 1.0;
+      marker.scale.x = 0.1;
+      marker.lifetime = ros::Duration();
+      geometry_msgs::Point p;
+      marker.points.clear();
+      p.z = 0;
+      int numOfPoints = 30;
+      for (double i = -r; i <= r; i += 2 * r / numOfPoints)
+      {
+        p.y = i;
+        p.x = sqrt(pow(r, 2) - pow(i, 2));
+        marker.points.push_back(p);
+      }
+      for (double i = r; i >= -r; i -= 2 * r / numOfPoints)
+      {
+        p.y = i;
+        p.x = -sqrt(pow(r, 2) - pow(i, 2));
+        marker.points.push_back(p);
+      }
+      marker_pub.publish(marker);
+    }
+
+
     /** sorts vectors from large to small
      * vec: vector to be sorted
      * sorted_vec: sorted results
      * ind: the position of each element in the sort result in the original vector
     */
-    void sort_vec(const VectorXd& vec, VectorXd& sorted_vec,  VectorXi& index){
+    void sortVec(const VectorXd& vec, VectorXd& sorted_vec,  VectorXi& index){
       index = VectorXi::LinSpaced(vec.size(),0,vec.size()-1);//[0 1 2 3 ... N-1]
 
       auto rule=[vec](int i, int j)->bool

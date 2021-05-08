@@ -20,6 +20,7 @@ find_package(
     tf2_ros
     tf2_geometry_msgs
 		simulation
+		visualization_msgs
 )
 
 find_package(
