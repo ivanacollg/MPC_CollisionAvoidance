@@ -38,7 +38,7 @@ class ObstacleSimulator:
         self.ned_y = 0
         self.yaw = 0
 
-        self.challenge = 0 #1 for AutonomousNavigation, 2 for SpeedChallenge
+        self.challenge = 1 #1 for AutonomousNavigation, 2 for SpeedChallenge
         self.obstacle_list = []
 
         self.max_visible_radius = 100
@@ -159,7 +159,7 @@ class ObstacleSimulator:
 
 def main():
     rospy.init_node('obstacle_simulator', anonymous = False)
-    rate = rospy.Rate(100) # 100hz
+    rate = rospy.Rate(20) # 100hz
     obstacleSimulator = ObstacleSimulator()
     if obstacleSimulator.challenge == 0:
 
@@ -168,9 +168,9 @@ def main():
                                     'Y' : 4.0,
                                     'R' : 1.0})
 
-        obstacleSimulator.obstacle_list.append({'X' : 4.5,
-                                    'Y' : 8.0,
-                                     'R' : 0.5})
+        obstacleSimulator.obstacle_list.append({'X' : 4.0,
+                                    'Y' : 6.5,
+                                     'R' : 1.0})
 
         obstacleSimulator.obstacle_list.append({'X' : 3.7,
                                     'Y' : 12.0,
@@ -179,7 +179,7 @@ def main():
         obstacleSimulator.obstacle_list.append({'X' : 4.2,
                                     'Y' : 20.0,
                                     'R' : 1.0})
-
+        '''
         obstacleSimulator.obstacle_list.append({'X' : 4.8,
                                     'Y' : -4.0,
                                     'R' : 1.0})
@@ -195,10 +195,11 @@ def main():
         obstacleSimulator.obstacle_list.append({'X' : 4.0,
                                     'Y' : -20.0,
                                     'R' : 1.0})
-
+        
         obstacleSimulator.obstacle_list.append({'X' : 3.5,
                                     'Y' : 30.0,
                                     'R' : 1.0})
+        '''
         
 
     elif obstacleSimulator.challenge == 1:

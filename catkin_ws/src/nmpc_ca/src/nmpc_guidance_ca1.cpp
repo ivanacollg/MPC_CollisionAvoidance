@@ -317,10 +317,18 @@ public:
             double body_x = _msg->obstacles[i].x;
             double body_y = _msg->obstacles[i].y;
             double radius = _msg->obstacles[i].z + boat_radius_;
+
+            double distance =  sqrt(body_x*body_x + body_y*body_y);
+            //std::cout<<"Obstacle "<< i << " distance "<< distance << " radius "<< radius << ".\n";
+            if (distance<radius)
+            {
+              ROS_WARN("COLLISION Obstacle %i distance %f", i, distance);
+            }
+
             obstacle_body << body_x, body_y, 0;
             obstacle_ned = body2NED(obstacle_body);
             obstacle_ned(2) = radius;
-            //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
+            //std::cout<<"Obstacles body r: "<< obstacle_ned[2] <<".\n";
             obstacles_list_[i] = obstacle_ned;
             circleDraw(obstacle_ned(0), 
                        obstacle_ned(1), 
@@ -438,17 +446,17 @@ public:
             double y1 = last_waypoints[2*k - 1];
             double x2 = last_waypoints[2*k];
             double y2 = last_waypoints[2*k + 1];
-            waypoint_path.x = x2;
-            waypoint_path.y = y2;
-            target_pub.publish(waypoint_path);
             double x_squared = pow(x2 - nedx_callback, 2);
             double y_squared = pow(y2 - nedy_callback, 2);
             double distance = pow(x_squared + y_squared, 0.5);
+            double ak = atan2(y2-y1, x2-x1);
             //std::cout<<"Distance:"<<distance<<".\n";
             d_speed.data = 0.7;
             if (distance > 1)
             {
-                double ak = atan2(y2-y1, x2-x1);
+                waypoint_path.x = x2;
+                waypoint_path.y = y2;
+                target_pub.publish(waypoint_path);
                 double ye = -(nedx_callback-x1)*sin(ak) 
                             + (nedy_callback-y1)*cos(ak);
                 control(x1, y1, ak, ye);
@@ -457,6 +465,22 @@ public:
             {
                 std::cout<<"Next waypoint";
                 k += 1;
+                x1 = last_waypoints[2*k - 2];
+                y1 = last_waypoints[2*k - 1];
+                x2 = last_waypoints[2*k];
+                y2 = last_waypoints[2*k + 1];
+                waypoint_path.x = x2;
+                waypoint_path.y = y2;
+                target_pub.publish(waypoint_path);
+                double ak2 = atan2(y2-y1, x2-x1);
+                double ye = -(nedx_callback-x1)*sin(ak2) 
+                            + (nedy_callback-y1)*cos(ak2);
+                past_psied = past_psied - ak2 + ak;
+                if (fabs(past_psied) > M_PI)
+                {
+                  past_psied = (past_psied/fabs(past_psied))*(fabs(past_psied) - 2*M_PI);
+                }
+                control(x1, y1, ak2, ye);
             }
         }
         else
@@ -529,20 +553,22 @@ public:
             acados_in.p_obs[14] = obstacles_list_[7][0];
             acados_in.p_obs[15] = obstacles_list_[7][1];
 
-            acados_in.r_obs[0] = obstacles_list_[0][2];
-            acados_in.r_obs[1] = obstacles_list_[1][2];
-            acados_in.r_obs[2] = obstacles_list_[2][2];
-            acados_in.r_obs[3] = obstacles_list_[3][2];
-            acados_in.r_obs[4] = obstacles_list_[4][2];
-            acados_in.r_obs[5] = obstacles_list_[5][2];
-            acados_in.r_obs[6] = obstacles_list_[6][2];
-            acados_in.r_obs[7] = obstacles_list_[7][2];
+            //std::cout<<"Obstacle position: "<< obstacles_list_[0][0] <<".\n";
+            //std::cout<<"Obstacle 0 min distance: "<< obstacles_list_[0][2] <<".\n";
+            acados_in.r_obs[0] = 1.5;//obstacles_list_[0][2];
+            acados_in.r_obs[1] = 1.5;//obstacles_list_[1][2];
+            acados_in.r_obs[2] = 1.5;//obstacles_list_[2][2];
+            acados_in.r_obs[3] = 1.5;//obstacles_list_[3][2];
+            acados_in.r_obs[4] = 1.5;//obstacles_list_[4][2];
+            acados_in.r_obs[5] = 1.5;//obstacles_list_[5][2];
+            acados_in.r_obs[6] = 1.5;//obstacles_list_[6][2];
+            acados_in.r_obs[7] = 1.5;//obstacles_list_[7][2];
 
             for (ii = 0; ii < N; ii++)
                 {
                 ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "yref", acados_in.yref);
                 acados_update_params( ii, acados_in.p_obs, 16);
-                ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, ii, "lh", acados_in.r_obs);
+                //ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, ii, "lh", acados_in.r_obs);
                 }
             ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);
             acados_update_params( N, acados_in.p_obs, 16);
@@ -559,8 +585,8 @@ public:
             // get solution at stage N = 1 (as thrust comes from x1 instead of u0 because of the derivative)
             ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 1, "x", (void *)acados_out.x1);
             float psid = acados_out.x1[psied] + _ak;
-            std::cout<<"psieddot: "<< acados_out.u0[psieddot]<<".\n";
-            std::cout<<"psied: "<< acados_out.x1[psied]<<".\n";
+            //std::cout<<"psieddot: "<< acados_out.u0[psieddot]<<".\n";
+            //std::cout<<"psied: "<< acados_out.x1[psied]<<".\n";
             if (fabs(psid) > M_PI){
               psid = (psid/fabs(psid))*(fabs(psid) - 2*M_PI);
             }
