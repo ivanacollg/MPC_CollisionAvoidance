@@ -463,7 +463,7 @@ public:
             }
             else
             {
-                std::cout<<"Next waypoint";
+                std::cout<<"Next waypoint"<<std::endl;
                 k += 1;
                 x1 = last_waypoints[2*k - 2];
                 y1 = last_waypoints[2*k - 1];
@@ -478,7 +478,7 @@ public:
                 past_psied = past_psied - ak2 + ak;
                 if (fabs(past_psied) > M_PI)
                 {
-                  past_psied = (past_psied/fabs(past_psied))*(fabs(past_psied) - 2*M_PI);
+                    past_psied = (past_psied/fabs(past_psied))*(fabs(past_psied) - 2*M_PI);
                 }
                 control(x1, y1, ak2, ye);
             }
@@ -593,8 +593,8 @@ public:
             past_psied = acados_out.x1[psied];
             d_heading.data = psid;
             desired_heading_pub.publish(d_heading);
-            //d_r.data = acados_out.u0[psieddot];
-            //desired_r_pub.publish(d_r);
+            d_r.data = acados_out.u0[psieddot];
+            desired_r_pub.publish(d_r);
             desired_speed_pub.publish(d_speed);
             eye.data = _ye;
             cross_track_error_pub.publish(eye);

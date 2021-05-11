@@ -70,9 +70,9 @@ simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
 simError = np.ndarray((Nsim, 3))
 
-obsx = np.array([1,4,4,4,4])
-obsy = np.array([0,4,7.0,12,20])
-radius = np.array([1.5,1.5,1.5,1.5,1.5,0,0,0]) #0.5
+obsx = np.array([4,4,4,4])
+obsy = np.array([4,7.0,12,20])
+radius = np.array([1.5,1.5,1.5,1.5,0,0,0,0]) #0.5
 pobs = np.ones(16)*100
 robs = np.zeros(8)
 
