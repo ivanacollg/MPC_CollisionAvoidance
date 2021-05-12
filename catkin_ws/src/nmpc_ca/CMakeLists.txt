@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(nmpc_ca)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -19,6 +19,8 @@ find_package(
     tf2
     tf2_ros
     tf2_geometry_msgs
+		simulation
+		visualization_msgs
 )
 
 find_package(
@@ -36,6 +38,8 @@ set(full_model_guidance2 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance2/c_generated
 set(full_model_guidance3 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance3/c_generated_code)
 set(full_model_guidance4 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance4/c_generated_code)
 set(full_model_guidance5 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance5/c_generated_code)
+set(full_model_guidance_ca ${PROJECT_SOURCE_DIR}/scripts/usv_guidance_ca/c_generated_code)
+set(full_model_guidance_ca1 ${PROJECT_SOURCE_DIR}/scripts/usv_guidance_ca1/c_generated_code)
 
 #generate_dynamic_reconfigure_options(
 #	config/crazyflie_params.cfg
@@ -55,7 +59,7 @@ catkin_package(
 #  DEPENDS eigen
 #  INCLUDE_DIRS include
 #  LIBRARIES sensors
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS rospy simulation
 #  DEPENDS system_lib
 )
 
@@ -75,6 +79,8 @@ include_directories(
 	${full_model_guidance3}
 	${full_model_guidance4}
 	${full_model_guidance5}
+  ${full_model_guidance_ca}
+	${full_model_guidance_ca1}
 	${acados_include}
 	${acados_include}/blasfeo/include/
 	${acados_include}/hpipm/include/
@@ -90,6 +96,8 @@ link_directories(${full_model_guidance2})
 link_directories(${full_model_guidance3})
 link_directories(${full_model_guidance4})
 link_directories(${full_model_guidance5})
+link_directories(${full_model_guidance_ca})
+link_directories(${full_model_guidance_ca1})
 
 # NMPC node
 add_executable(acados_mpc src/acados_mpc.cpp)
@@ -158,6 +166,23 @@ target_link_libraries(nmpc_guidance5
 	${acados_lib}/libacados.so
 	${catkin_LIBRARIES}
 )
+
+add_executable(nmpc_guidance_ca src/nmpc_guidance_ca.cpp)
+target_link_libraries(nmpc_guidance_ca
+	${full_model_guidance_ca}/libacados_ocp_solver_usv_model_guidance_ca.so
+	#${acados_lib}/libacados.a
+	${acados_lib}/libacados.so
+	${catkin_LIBRARIES}
+)
+
+add_executable(nmpc_guidance_ca1 src/nmpc_guidance_ca1.cpp)
+target_link_libraries(nmpc_guidance_ca1
+	${full_model_guidance_ca1}/libacados_ocp_solver_usv_model_guidance_ca1.so
+	#${acados_lib}/libacados.a
+	${acados_lib}/libacados.so
+	${catkin_LIBRARIES}
+)
+add_dependencies(nmpc_guidance_ca1 ${catkin_EXPORTED_TARGETS})
 
 
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencfg)
