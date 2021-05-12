@@ -555,20 +555,20 @@ public:
 
             //std::cout<<"Obstacle position: "<< obstacles_list_[0][0] <<".\n";
             //std::cout<<"Obstacle 0 min distance: "<< obstacles_list_[0][2] <<".\n";
-            acados_in.r_obs[0] = 1.5;//obstacles_list_[0][2];
-            acados_in.r_obs[1] = 1.5;//obstacles_list_[1][2];
-            acados_in.r_obs[2] = 1.5;//obstacles_list_[2][2];
-            acados_in.r_obs[3] = 1.5;//obstacles_list_[3][2];
-            acados_in.r_obs[4] = 1.5;//obstacles_list_[4][2];
-            acados_in.r_obs[5] = 1.5;//obstacles_list_[5][2];
-            acados_in.r_obs[6] = 1.5;//obstacles_list_[6][2];
-            acados_in.r_obs[7] = 1.5;//obstacles_list_[7][2];
+            acados_in.r_obs[0] = obstacles_list_[0][2];
+            acados_in.r_obs[1] = obstacles_list_[1][2];
+            acados_in.r_obs[2] = obstacles_list_[2][2];
+            acados_in.r_obs[3] = obstacles_list_[3][2];
+            acados_in.r_obs[4] = obstacles_list_[4][2];
+            acados_in.r_obs[5] = obstacles_list_[5][2];
+            acados_in.r_obs[6] = obstacles_list_[6][2];
+            acados_in.r_obs[7] = obstacles_list_[7][2];
 
             for (ii = 0; ii < N; ii++)
                 {
                 ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "yref", acados_in.yref);
                 acados_update_params( ii, acados_in.p_obs, 16);
-                //ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, ii, "lh", acados_in.r_obs);
+                ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, ii, "lh", acados_in.r_obs);
                 }
             ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);
             acados_update_params( N, acados_in.p_obs, 16);
