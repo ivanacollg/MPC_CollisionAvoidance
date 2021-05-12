@@ -38,7 +38,7 @@ class ObstacleSimulator:
         self.ned_y = 0
         self.yaw = 0
 
-        self.challenge = 1 #1 for AutonomousNavigation, 2 for SpeedChallenge
+        self.challenge = 0 #1 for AutonomousNavigation, 2 for SpeedChallenge
         self.obstacle_list = []
 
         self.max_visible_radius = 100
@@ -169,7 +169,7 @@ def main():
                                     'R' : 1.0})
 
         obstacleSimulator.obstacle_list.append({'X' : 4.0,
-                                    'Y' : 6.5,
+                                    'Y' : 7.0,
                                      'R' : 1.0})
 
         obstacleSimulator.obstacle_list.append({'X' : 3.7,
