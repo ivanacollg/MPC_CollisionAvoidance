@@ -1,10 +1,14 @@
 #include <ros/ros.h>
+#include <ros/console.h>
 #include <std_msgs/UInt8.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Pose2D.h>
+#include <visualization_msgs/Marker.h>
+
+#include <simulation/obstacles_list.h>
 
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
@@ -24,8 +28,17 @@
 #include "blasfeo/include/blasfeo_d_aux.h"
 #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
 
-#include "usv_model_pf_model/usv_model_pf_model.h"
-#include "acados_solver_usv_model_pf.h"
+#include "usv_model_pf_ca_model/usv_model_pf_ca_model.h"
+#include "acados_solver_usv_model_pf_ca.h"
+
+/**
+ * Represents a 3x3 matrix
+ * */
+typedef Eigen::Matrix<double, 3, 3> xMatrix3;
+/**
+ * Represents a 3x1 vector
+ * */
+typedef Eigen::Matrix<double, 3, 1> xVector3;
 
 // global data
 ocp_nlp_in * nlp_in;
@@ -48,15 +61,19 @@ using std::showpos;
 // acados dims
 
 // Number of intervals in the horizon
-#define N 100
+#define N 400
 // Number of differential state variables
-#define NX 14
+#define NX 12
 // Number of control inputs
 #define NU 2
 // Number of measurements/references on nodes 0..N-1
-#define NY 16
+#define NY 14
 // Number of measurements/references on node N
-#define NYN 14
+#define NYN 12
+// Number of obstacles allowed times 2 (x,y)
+#define XYOBS 16
+// Number of obstalces
+#define OBS 8
 
 class NMPC
     {
@@ -68,13 +85,11 @@ class NMPC
         v = 4,
         r = 5,
         ye = 6,
-        x1 = 7,
-        y1 = 8, 
-        ak = 9,
-        nedx = 10,
-        nedy = 11,
-        Tport = 12,
-        Tstbd = 13
+        ak = 7,
+        nedx = 8,
+        nedy = 9,
+        Tport = 10,
+        Tstbd = 11
     };
 
     enum controlInputs{
@@ -91,6 +106,8 @@ class NMPC
         double x0[NX];
         double yref[NY];
         double yref_e[NYN];
+        double p_obs[XYOBS];
+        double r_obs[OBS];
     };
 
     // publishers and subscribers
@@ -100,10 +117,12 @@ class NMPC
     ros::Publisher cross_track_error_pub;
     ros::Publisher control_input_pub;
     ros::Publisher desired_speed_pub;
+    ros::Publisher marker_pub;
 
     ros::Subscriber local_vel_sub;
     ros::Subscriber ins_pos_sub;
     ros::Subscriber waypoints_sub;
+    ros::Subscriber obstacles_sub;
 
     unsigned int i,j,ii;
 
@@ -117,6 +136,19 @@ class NMPC
     std_msgs::Float64 eye;
     std_msgs::Float64 d_speed;
     geometry_msgs::Pose2D ctrl_input;
+    /**
+    * Safety visualization Markers
+    * */
+    visualization_msgs::Marker marker;
+
+    /**
+    * Obstacle list vector
+    * */
+    std::vector<Eigen::Vector3f> obstacles_list_;
+    const double boat_radius_ = 0.5;
+    const unsigned int obs_num_ = 8;
+    const unsigned int init_obs_pos_ = 1000;
+    const double safety_radius_ = 0.2;
 
     // acados struct
     solver_input acados_in;
@@ -151,11 +183,13 @@ public:
         control_input_pub = n.advertise<geometry_msgs::Pose2D>("/usv_control/controller/control_input", 1000);
         target_pub = n.advertise<geometry_msgs::Pose2D>("/guidance/target", 1000);
         desired_speed_pub = n.advertise<std_msgs::Float64>("/guidance/desired_speed", 1000);
+        marker_pub = n.advertise<visualization_msgs::Marker>("/nmpc_ca/safety_vizualization", 1);
 
         // ROS Subscribers
         local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, &NMPC::velocityCallback, this);
-        ins_pos_sub = n.subscribe("/vectornav/ins_2d/ins_pose", 1000, &NMPC::positionCallback, this);
+        ins_pos_sub = n.subscribe("/vectornav/ins_2d/NED_pose", 1000, &NMPC::positionCallback, this);
         waypoints_sub = n.subscribe("/mission/waypoints", 1000, &NMPC::waypointsCallback, this);
+        obstacles_sub = n.subscribe("/usv_perception/lidar_detector/obstacles",  5, &NMPC::obstaclesCallback, this);
 
         // Initializing control inputs
         for(unsigned int i=0; i < NU; i++) acados_out.u0[i] = 0.0;
@@ -186,6 +220,9 @@ public:
         acados_in.x0[Tport] = past_Tport;
         acados_in.x0[Tstbd] = past_Tstbd;
 
+        //Initialize Obstacles
+        initializeObstacles();
+
         waypoints.clear();
         last_waypoints.clear();
     }
@@ -210,6 +247,8 @@ public:
         nedx_callback = _pos->x;
         nedy_callback = _pos->y;
         psi_callback = _pos->theta;
+
+        circleDraw(nedx_callback, nedy_callback, boat_radius_, "boat_pose", 0);
     }
 
     void waypointsCallback(const std_msgs::Float32MultiArray::ConstPtr& _msg)
@@ -222,6 +261,194 @@ public:
             waypoints.push_back(_msg -> data[i]);
         }
     }
+
+    void obstaclesCallback(const simulation::obstacles_list::ConstPtr& _msg)
+    {
+        Eigen::Vector3f obstacle_body;
+        Eigen::Vector3f obstacle_ned;
+
+        // If there are more obstacles than MPC algorithim can handle
+        if (_msg->len > obs_num_)
+        {
+          Eigen::VectorXd obstacle_distances(_msg->len);
+
+          // Calculate the distance to all obstacles
+          for (int i = 0; i < _msg->len; i++)
+          {
+            double body_x = _msg->obstacles[i].x;
+            double body_y = _msg->obstacles[i].y;
+            double radius = _msg->obstacles[i].z + boat_radius_;
+            double distance =  sqrt(body_x*body_x + body_y*body_y) - radius;
+            obstacle_distances(i) = distance;
+          }
+
+          // Sort obstacles in terms of ditances (closest to farthest)
+          Eigen::VectorXi index_vec;
+          Eigen::VectorXd sorted_vec;
+          sortVec(obstacle_distances,sorted_vec,index_vec);
+          /*std::cout<<"Original Vector: \n";
+          std::cout<<obstacle_distances<<std::endl<<std::endl;
+          std::cout<<"After sorting: \n";
+          std::cout<<sorted_vec<<std::endl<<std::endl;
+          std::cout<<"Positioning the position in the original vector corresponding to each element of the vector"<<endl;
+          std::cout<<index_vec<<std::endl;*/
+
+          // Use only 8 closest obstacles
+          for (int i = 0; i < obs_num_; i++)
+          {
+            int index = index_vec[i];
+            double body_x = _msg->obstacles[index].x;
+            double body_y = _msg->obstacles[index].y;
+            double radius = _msg->obstacles[index].z + boat_radius_;
+            obstacle_body << body_x, body_y, 0;
+            obstacle_ned = body2NED(obstacle_body);
+            obstacle_ned(2) = radius;
+            //std::cout<<"Obstacles body x: "<< obstacle_ned[0] <<".\n";
+            obstacles_list_[i] = obstacle_ned;
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2), 
+                       "obstacle_circle", 
+                       i);
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2) + safety_radius_, 
+                       "obstacle_circle", 
+                       i + obs_num_);
+          }
+        }
+
+        // If MPC can handle # of obstacles
+        else
+        {
+          // Initialize obstalces to a far distance with 0 radius
+          initializeObstacles();
+
+          // Obstain obstacle values
+          for (int i = 0; i < _msg->len; i++)
+          {
+            double body_x = _msg->obstacles[i].x;
+            double body_y = _msg->obstacles[i].y;
+            double radius = _msg->obstacles[i].z + boat_radius_;
+
+            double distance =  sqrt(body_x*body_x + body_y*body_y);
+            //std::cout<<"Obstacle "<< i << " distance "<< distance << " radius "<< radius << ".\n";
+            if (distance<radius)
+            {
+              ROS_WARN("COLLISION Obstacle %i distance %f", i, distance);
+            }
+
+            obstacle_body << body_x, body_y, 0;
+            obstacle_ned = body2NED(obstacle_body);
+            obstacle_ned(2) = radius;
+            //std::cout<<"Obstacles body r: "<< obstacle_ned[2] <<".\n";
+            obstacles_list_[i] = obstacle_ned;
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2), 
+                       "obstacle_circle", 
+                       i);
+            circleDraw(obstacle_ned(0), 
+                       obstacle_ned(1), 
+                       obstacle_ned(2) + safety_radius_, 
+                       "obstacle_circle", 
+                       i + obs_num_);
+          }
+        }
+
+    }
+
+    Eigen::Vector3f body2NED(const Eigen::Vector3f _obstacle_body)
+    {
+        Eigen::Matrix3f R;
+        Eigen::Vector3f obstacle_ned;
+        
+        R << cos(psi_callback), -sin(psi_callback), 0.0,
+            sin(psi_callback), cos(psi_callback),  0.0,
+            0.0,               0.0,                1.0;
+        
+        obstacle_ned = R*_obstacle_body;
+
+        obstacle_ned(0) = obstacle_ned(0) + nedx_callback;
+        obstacle_ned(1) = obstacle_ned(1) + nedy_callback;
+        
+        return obstacle_ned;
+    }
+
+    void initializeObstacles()
+    {
+        obstacles_list_.clear();
+        Eigen::Vector3f obstacle;
+        obstacle << init_obs_pos_, init_obs_pos_, 0;
+
+        for(i=0; i<obs_num_; i++)
+        {
+          obstacles_list_.push_back(obstacle);
+        }
+
+    }
+
+    void circleDraw(double h, double k, double r, std::string ns, int i)
+    {
+      marker.header.frame_id = "/world";
+      marker.header.stamp = ros::Time::now();
+      marker.ns = ns;
+      marker.id = i;
+      marker.type = visualization_msgs::Marker::LINE_STRIP;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.pose.position.x = h;
+      marker.pose.position.y = -k;
+      marker.pose.position.z = 0;
+      marker.pose.orientation.x = 0.0;
+      marker.pose.orientation.y = 0.0;
+      marker.pose.orientation.z = 0.0;
+      marker.pose.orientation.w = 1.0;
+      marker.color.b = 0.5;
+      marker.color.a = 1.0;
+      marker.scale.x = 0.1;
+      marker.lifetime = ros::Duration();
+      geometry_msgs::Point p;
+      marker.points.clear();
+      p.z = 0;
+      int numOfPoints = 30;
+      for (double i = -r; i <= r; i += 2 * r / numOfPoints)
+      {
+        p.y = i;
+        p.x = sqrt(pow(r, 2) - pow(i, 2));
+        marker.points.push_back(p);
+      }
+      for (double i = r; i >= -r; i -= 2 * r / numOfPoints)
+      {
+        p.y = i;
+        p.x = -sqrt(pow(r, 2) - pow(i, 2));
+        marker.points.push_back(p);
+      }
+      marker_pub.publish(marker);
+    }
+
+    /** sorts vectors from large to small
+     * vec: vector to be sorted
+     * sorted_vec: sorted results
+     * ind: the position of each element in the sort result in the original vector
+    */
+    void sortVec(const VectorXd& vec, VectorXd& sorted_vec,  VectorXi& index){
+      index = VectorXi::LinSpaced(vec.size(),0,vec.size()-1);//[0 1 2 3 ... N-1]
+
+      auto rule=[vec](int i, int j)->bool
+      {
+        return vec(i)<vec(j);
+      };// regular expression, as a predicate of sort
+
+      std::sort(index.data(),index.data()+index.size(),rule);
+      //The data member function returns a pointer to the first element of 
+      //VectorXd, similar to begin()
+      sorted_vec.resize(vec.size());
+
+      for(int i=0;i<vec.size();i++){
+        sorted_vec(i)=vec(index(i));
+      }
+    }
+
 
     void waypoint_manager()
     {
@@ -237,9 +464,10 @@ public:
             double x_squared = pow(x2 - nedx_callback, 2);
             double y_squared = pow(y2 - nedy_callback, 2);
             double distance = pow(x_squared + y_squared, 0.5);
-            std::cout<<"Distance:"<<distance<<".\n";
-            d_speed.data = 0.7;
+            //std::cout<<"Distance:"<<distance<<".\n";
             u_des = 0.7;
+            d_speed.data = u_des;
+            
             if (distance > 1)
             {
                 double ak = atan2(y2-y1, x2-x1);
@@ -271,6 +499,9 @@ public:
         {
 
             double beta = std::atan2(v_callback, u_callback+.001);
+            if (v*v + u*u > 0){
+                beta = std::atan2(v_callback, u_callback);
+            }
             double chi = psi_callback + beta;
             psisin_callback = std::sin(chi);
             psicos_callback = std::cos(chi);
@@ -282,8 +513,6 @@ public:
             acados_in.x0[v] = v_callback;
             acados_in.x0[r] = r_callback;
             acados_in.x0[ye] = _ye;
-            acados_in.x0[x1] = _x1;
-            acados_in.x0[y1] = _y1;
             acados_in.x0[ak] = _ak;
             acados_in.x0[nedx] = nedx_callback;
             acados_in.x0[nedy] = nedy_callback;
@@ -303,8 +532,6 @@ public:
             acados_in.yref[4] = v_des;         // v
             acados_in.yref[5] = r_des;         // r
             acados_in.yref[6] = ye_des;         // ye
-            acados_in.yref[7] = 0.00;         // x1
-            acados_in.yref[8] = 0.00;         // x2
             acados_in.yref[9] = 0.00;         // ak
             acados_in.yref[10] = 0.00;         // nedx
             acados_in.yref[11] = 0.00;         // nedy
@@ -320,19 +547,49 @@ public:
             acados_in.yref_e[4] = v_des;         // v
             acados_in.yref_e[5] = r_des;         // r
             acados_in.yref_e[6] = ye_des;         // ye
-            acados_in.yref_e[7] = 0.00;         // x1
-            acados_in.yref_e[8] = 0.00;         // x2
             acados_in.yref_e[9] = 0.00;         // ak
             acados_in.yref_e[10] = 0.00;         // nedx
             acados_in.yref_e[11] = 0.00;         // nedy
             acados_in.yref_e[12] = 0.00;          // Tport
             acados_in.yref_e[13] = 0.00;          // Tstbd
 
+            acados_in.p_obs[0]  = obstacles_list_[0][0];
+            acados_in.p_obs[1]  = obstacles_list_[0][1];
+            acados_in.p_obs[2]  = obstacles_list_[1][0];
+            acados_in.p_obs[3]  = obstacles_list_[1][1];
+            acados_in.p_obs[4]  = obstacles_list_[2][0];
+            acados_in.p_obs[5]  = obstacles_list_[2][1];
+            acados_in.p_obs[6]  = obstacles_list_[3][0];
+            acados_in.p_obs[7]  = obstacles_list_[3][1];
+            acados_in.p_obs[8]  = obstacles_list_[4][0];
+            acados_in.p_obs[9]  = obstacles_list_[4][1];
+            acados_in.p_obs[10] = obstacles_list_[5][0];
+            acados_in.p_obs[11] = obstacles_list_[5][1];
+            acados_in.p_obs[12] = obstacles_list_[6][0];
+            acados_in.p_obs[13] = obstacles_list_[6][1];
+            acados_in.p_obs[14] = obstacles_list_[7][0];
+            acados_in.p_obs[15] = obstacles_list_[7][1];
+
+            //std::cout<<"Obstacle position: "<< obstacles_list_[0][0] <<".\n";
+            //std::cout<<"Obstacle 0 min distance: "<< obstacles_list_[0][2] <<".\n";
+            acados_in.r_obs[0] = obstacles_list_[0][2];
+            acados_in.r_obs[1] = obstacles_list_[1][2];
+            acados_in.r_obs[2] = obstacles_list_[2][2];
+            acados_in.r_obs[3] = obstacles_list_[3][2];
+            acados_in.r_obs[4] = obstacles_list_[4][2];
+            acados_in.r_obs[5] = obstacles_list_[5][2];
+            acados_in.r_obs[6] = obstacles_list_[6][2];
+            acados_in.r_obs[7] = obstacles_list_[7][2];
+
+
             for (ii = 0; ii < N; ii++)
                 {
                 ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, ii, "yref", acados_in.yref);
+                acados_update_params( ii, acados_in.p_obs, 16);
+                ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, ii, "lh", acados_in.r_obs);
                 }
             ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "yref", acados_in.yref_e);
+            acados_update_params( N, acados_in.p_obs, 16);
 
             // call solver
             acados_status = acados_solve();
@@ -381,11 +638,11 @@ public:
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "nmpc_pf");
+    ros::init(argc, argv, "nmpc_pf_ca");
 
     ros::NodeHandle n("~");
     NMPC nmpc(n);
-    ros::Rate loop_rate(N);
+    ros::Rate loop_rate(100);
     nmpc.last_waypoints.clear();
 
     while(ros::ok()){

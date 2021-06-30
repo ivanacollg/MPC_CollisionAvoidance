@@ -121,7 +121,7 @@ def plotRes(simX,simU, simError, obsx, obsy, radius, t):
     plt.legend(['u','v','r'])
     plt.grid(True)
     plt.subplot(5, 1, 4)
-    plt.plot(t, simX[:,12:14])
+    plt.plot(t, simX[:,10:12])
     plt.ylabel('x')
     plt.xlabel('t')
     plt.legend(['Tport','Tstbd'])
@@ -135,12 +135,10 @@ def plotRes(simX,simU, simError, obsx, obsy, radius, t):
 
     fig = plt.figure(2)
     plt.subplot(1, 1, 1)
-    plt.plot(simX[:,11:12], simX[:,10:11])
-    #plt.scatter(obsy,obsx) 
-    #plt.plot(obsy,obsx,'bo')
+    plt.plot(simX[:,9:10], simX[:,8:9])
     ax = fig.gca()
     for j in range(len(obsx)):
-        c = plt.Circle((obsy[j],obsx[j]),radius)
+        c = plt.Circle((obsy[j],obsx[j]),radius[j])
         ax.add_patch(c)
     plt.ylabel('x')
     plt.xlabel('y')

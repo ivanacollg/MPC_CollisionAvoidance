@@ -51,9 +51,9 @@ The simulation starts at s=-2m until one round is completed(s=8.71m). The beginn
 #track = "LMS_Track.txt"
 #[Sref, _, _, _, _] = getTrack(track)
 
-Tf = 1.0  # prediction horizon
-N = 100  # number of discretization steps
-T = 40.00  # maximum simulation time[s]
+Tf = 4.0  # prediction horizon
+N = 400  # number of discretization steps
+T = 60.00  # maximum simulation time[s]
 #sref_N = 3  # reference for final reference progress
 
 # load model
@@ -70,11 +70,11 @@ simX = np.ndarray((Nsim, nx))
 simU = np.ndarray((Nsim, nu))
 simError = np.ndarray((Nsim, 3))
 
-obsx = np.array([3,4,3.7,4.2])
-obsy = np.array([2,8,16,20])
-radius = 0.5
-pobs = np.zeros(8)
-robs = np.zeros(4)
+obsx = np.array([4,6,2,4])
+obsy = np.array([4.0,6.0,6,8])
+radius = np.array([1.0,1.0,1.0,1.0,0,0,0,0]) #0.5
+pobs = np.ones(16)*100
+robs = np.zeros(8)
 
 #s0 = model.x0[0]
 tcomp_sum = 0
@@ -104,13 +104,13 @@ ak = np.math.atan2(y2-y1, x2-x1)
 nedx = 0
 nedy = 0
 ye = -(nedx-x1)*np.sin(ak)+(nedy-y1)*np.cos(ak)
-x_start = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+x_start = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, ak, nedx, nedy, 0.00, 0.00])
 
 acados_solver.set(0, "lbx", x_start)
 acados_solver.set(0, "ubx", x_start)
 
 #References
-u_ref = 0.7
+u_ref = 1.2
 ak_ref = ak
 sinpsi_ref = np.sin(ak_ref)
 cospsi_ref = np.cos(ak_ref)
@@ -123,18 +123,15 @@ for i in range(Nsim):
     for ii in range(len(obsx)):
         pobs[2*ii] = obsx[ii]
         pobs[2*ii+1] = obsy[ii]
-        robs[ii] = radius + 0.2
+        robs[ii] = radius[ii]
     for j in range(N):
-        #yref = np.array([u0 + (u_ref - u0) * j / N, 0, 0, 0, 0, 0, 0, 0])
-        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        yref=np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0])
         acados_solver.set(j, "yref", yref)
         acados_solver.set(j, "p", pobs)
         acados_solver.constraints_set(j, "lh", robs)
-    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0, 0, 0])
-    # yref_N=np.array([0,0,0,0,0,0])
+    yref_N = np.array([0, sinpsi_ref, cospsi_ref, u_ref, 0, 0, ye_ref, 0, 0, 0, 0, 0])
     acados_solver.set(N, "yref", yref_N)
     acados_solver.set(N, "p", pobs)
-    #acados_solver.constraints_set(N, "lh", robs)
 
     # solve ocp
     t = time.time()

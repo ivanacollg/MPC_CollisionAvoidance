@@ -69,34 +69,17 @@ def acados_settings(Tf, N):
     #np = model.p.size()[0]
 
     ocp.dims.N = N
-    #ns = 2
-    #nsh = 2
+    ns = 8
+    nsh = 8
 
-    # set cos
-    #Q = np.diag([0, 0.1, 0.1, 0.1, 0, 0.000000, 0.0000001, 0.0000000])
-    #
-    #R = np.eye(nu)
-    #R[0, 0] = 0.0000000
-    #R[1, 1] = 0.0000000
-    #
-    #Qe = np.diag([ 0, 0.05, 0.05, 0.1, 0, 0.0000000, 0.000001, 0.0000000])
+    # set cost
+    Q = np.diag([0, 2.0, 2.0, 30.0, 0, 0.1, 0.5, 0, 0, 0, 0.001, 0.001])
 
-    #Q = np.diag([0, 1e6, 1e6, 1e7, 0.0, 0, 0.5e1, 0.0e1])
-    #
-    #R = np.eye(nu)
-    #R[0, 0] = 1e3
-    #R[1, 1] = 1e3
-    #
-    #Qe = np.diag([ 0, 5e7, 5e7, 5e7, 0, 0, 0.5e1, 0.0e1])
-
-    #Q = np.diag([0, 0.3, 0.3, 1.5, 0, 0, 0.8, 0, 0, 0, 0, 0, 0.0001, 0.0001])
-    Q = np.diag([0, 0.3, 0.3, 80.0, 0, 0, 0.8, 0, 0, 0, 0, 0, 0.0001, 0.0001])
     R = np.eye(nu)
-    R[0, 0] = 0.0
-    R[1, 1] = 0.0
+    R[0, 0] = 0.001
+    R[1, 1] = 0.001
 
-    #Qe = np.diag([0, 0.5, 0.5, 2.0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0.0005, 0.0005])
-    Qe = np.diag([0, 0.5, 0.5, 100.0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0.0005, 0.0005])
+    Qe = np.diag([0, 4.0, 4.0, 60.0, 0, 0.2, 1.0, 0, 0, 0, 0.002, 0.002])
 
 
     ocp.cost.cost_type = "LINEAR_LS"
@@ -113,27 +96,27 @@ def acados_settings(Tf, N):
     ocp.cost.Vx = Vx
  
     Vu = np.zeros((ny, nu))
-    Vu[8, 0] = 1.0
-    Vu[9, 1] = 1.0
+    Vu[12, 0] = 1.0
+    Vu[13, 1] = 1.0
     ocp.cost.Vu = Vu
 
     Vx_e = np.zeros((ny_e, nx))
     Vx_e[:nx, :nx] = np.eye(nx)
     ocp.cost.Vx_e = Vx_e
 
-    '''ocp.cost.zl = 0 * np.ones((ns,)) #previously 100
+    ocp.cost.zl = 50 * np.ones((ns,)) #previously 100
     ocp.cost.Zl = 0 * np.ones((ns,))
-    ocp.cost.zu = 0 * np.ones((ns,)) #previously 100
-    ocp.cost.Zu = 0 * np.ones((ns,))'''
+    ocp.cost.zu = 50 * np.ones((ns,)) #previously 100
+    ocp.cost.Zu = 0 * np.ones((ns,))
 
     # set intial references
-    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     # setting constraints
     ocp.constraints.lbx = np.array([model.u_min, model.u_min, model.r_min, model.Tport_min, model.Tstbd_min])
     ocp.constraints.ubx = np.array([model.u_max, model.u_max, model.r_max, model.Tport_max, model.Tstbd_max])
-    ocp.constraints.idxbx = np.array([3,4,5,12,13])
+    ocp.constraints.idxbx = np.array([3,4,5,10,11])
     ocp.constraints.lbu = np.array([model.Tportdot_min, model.Tstbddot_min])
     ocp.constraints.ubu = np.array([model.Tportdot_max, model.Tstbddot_max])
     ocp.constraints.idxbu = np.array([0, 1])
@@ -145,11 +128,19 @@ def acados_settings(Tf, N):
              constraint.distance_min,
              constraint.distance_min,
              constraint.distance_min,
+             constraint.distance_min,
+             constraint.distance_min,
+             constraint.distance_min,
+             constraint.distance_min,
              constraint.distance_min
         ]
     )
     ocp.constraints.uh = np.array(
         [
+            1000000,
+            1000000,
+            1000000,
+            1000000,
             1000000,
             1000000,
             1000000,
@@ -160,11 +151,37 @@ def acados_settings(Tf, N):
     ocp.constraints.ush = np.zeros(nsh)
     ocp.constraints.idxsh = np.array([0, 2])'''
 
+    ocp.constraints.lsh = np.array(
+        [
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2,
+             -0.2
+        ]
+    )
+    ocp.constraints.ush = np.array(
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ) 
+    ocp.constraints.idxsh = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+
     # set intial condition
     ocp.constraints.x0 = model.x0
 
     # set initial parameters
-    ocp.parameter_values = np.array([0,0,0,0,0,0,0,0])
+    ocp.parameter_values = np.array([100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100])
 
     # set QP solver and integration
     ocp.solver_options.tf = Tf

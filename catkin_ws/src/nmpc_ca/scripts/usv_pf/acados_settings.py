@@ -112,8 +112,8 @@ def acados_settings(Tf, N):
     ocp.cost.Vx = Vx
  
     Vu = np.zeros((ny, nu))
-    Vu[8, 0] = 1.0
-    Vu[9, 1] = 1.0
+    Vu[14, 0] = 1.0
+    Vu[15, 1] = 1.0
     ocp.cost.Vu = Vu
 
     Vx_e = np.zeros((ny_e, nx))

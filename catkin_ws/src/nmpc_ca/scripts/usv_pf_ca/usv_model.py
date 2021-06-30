@@ -85,14 +85,12 @@ def usv_model():
     v = MX.sym("v")
     r = MX.sym("r")
     ye = MX.sym("ye")
-    x1 = MX.sym("x1")
-    y1 = MX.sym("y1")
     ak = MX.sym("ak")
     nedx = MX.sym("nedx")
     nedy = MX.sym("nedy")
     Tport = MX.sym("Tport")
     Tstbd = MX.sym("Tstbd")
-    x = vertcat(psi, sinpsi, cospsi, u, v, r, ye, x1, y1, ak, nedx, nedy, Tport, Tstbd)
+    x = vertcat(psi, sinpsi, cospsi, u, v, r, ye, ak, nedx, nedy, Tport, Tstbd)
 
     # controls
     UTportdot = MX.sym("UTportdot")
@@ -107,14 +105,12 @@ def usv_model():
     vdot = MX.sym("vdot")
     rdot = MX.sym("rdot")
     yedot = MX.sym("yedot")
-    x1dot = MX.sym("x1dot")
-    y1dot = MX.sym("y1dot")
     akdot = MX.sym("akdot")
     nedxdot = MX.sym("nedxdot")
     nedydot = MX.sym("nedydot")
     Tportdot = MX.sym("Tportdot")
     Tstbddot = MX.sym("Tstbddot")
-    xdot = vertcat(psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, x1dot, y1dot, akdot, nedxdot, nedydot, Tportdot, Tstbddot)
+    xdot = vertcat(psidot, sinpsidot, cospsidot, udot, vdot, rdot, yedot, akdot, nedxdot, nedydot, Tportdot, Tstbddot)
 
     # algebraic variables
     z = vertcat([])
@@ -122,13 +118,21 @@ def usv_model():
     # parameters
     ox1 = MX.sym("ox1")
     oy1 = MX.sym("oy1")
-    ox2 = MX.sym("ox1")
-    oy2 = MX.sym("oy1")
-    ox3 = MX.sym("ox1")
-    oy3 = MX.sym("oy1")
-    ox4 = MX.sym("ox1")
-    oy4 = MX.sym("oy1")
-    p = vertcat(ox1,oy1,ox2,oy2,ox3,oy3,ox4,oy4)
+    ox2 = MX.sym("ox2")
+    oy2 = MX.sym("oy2")
+    ox3 = MX.sym("ox3")
+    oy3 = MX.sym("oy3")
+    ox4 = MX.sym("ox4")
+    oy4 = MX.sym("oy4")
+    ox5 = MX.sym("ox5")
+    oy5 = MX.sym("oy5")
+    ox6 = MX.sym("ox6")
+    oy6 = MX.sym("oy6")
+    ox7 = MX.sym("ox7")
+    oy7 = MX.sym("oy7")
+    ox8 = MX.sym("ox8")
+    oy8 = MX.sym("oy8")
+    p = vertcat(ox1,oy1,ox2,oy2,ox3,oy3,ox4,oy4,ox5,oy5,ox6,oy6,ox7,oy7,ox8,oy8)
     #p = vertcat([])
 
     # dynamics
@@ -151,8 +155,6 @@ def usv_model():
       (Tr - (-2*Y_v_dot*u*v - (Y_r_dot + N_v_dot)*r*u + X_u_dot*u*r) - (-Nr*r - Nrv*fabs(v)*r - Nrr*fabs(r)*r)) / (Iz - N_r_dot),
       -(u*cos(psi) - v*sin(psi))*sin(ak) + (u*sin(psi) + v*cos(psi))*cos(ak),
       0,
-      0,
-      0,
       u*cos(psi) - v*sin(psi),
       u*sin(psi) + v*cos(psi),
       UTportdot,
@@ -166,10 +168,14 @@ def usv_model():
     distance2 = sqrt((nedx-ox2)*(nedx-ox2) + (nedy-oy2)*(nedy-oy2))
     distance3 = sqrt((nedx-ox3)*(nedx-ox3) + (nedy-oy3)*(nedy-oy3))
     distance4 = sqrt((nedx-ox4)*(nedx-ox4) + (nedy-oy4)*(nedy-oy4))
+    distance5 = sqrt((nedx-ox5)*(nedx-ox5) + (nedy-oy5)*(nedy-oy5))
+    distance6 = sqrt((nedx-ox6)*(nedx-ox6) + (nedy-oy6)*(nedy-oy6))
+    distance7 = sqrt((nedx-ox7)*(nedx-ox7) + (nedy-oy7)*(nedy-oy7))
+    distance8 = sqrt((nedx-ox8)*(nedx-ox8) + (nedy-oy8)*(nedy-oy8))
 
     # Model bounds
-    model.u_min = -2.0
-    model.u_max = 2.0
+    model.u_min = -1.5
+    model.u_max = 1.5
 
     # state bounds
     model.Tport_min = -30
@@ -177,40 +183,36 @@ def usv_model():
     model.Tport_max = 36.5
     model.Tstbd_max = 36.5
 
-    model.r_min = -10.0 # minimum angular velocity [rad/s]
-    model.r_max = 10.0  # maximum angular velocity [rad/s]
+    model.r_min = -5.0 # minimum angular velocity [rad/s]
+    model.r_max = 5.0  # maximum angular velocity [rad/s]
 
     # input bounds
-    model.Tstbddot_min = -30 # minimum throttle change rate
-    model.Tstbddot_max = 30 # maximum throttle change rate
-    model.Tportdot_min = -30 # minimum throttle change rate
-    model.Tportdot_max = 30 # maximum throttle change rate
+    model.Tstbddot_min = -90 # minimum throttle change rate
+    model.Tstbddot_max = 90 # maximum throttle change rate
+    model.Tportdot_min = -90 # minimum throttle change rate
+    model.Tportdot_max = 90 # maximum throttle change rate
 
     # nonlinear constraint
     #constraint.alat_min = -4  # maximum lateral force [m/s^2]
     #constraint.alat_max = 4  # maximum lateral force [m/s^1]
-    constraint.distance_min = 0.0
+    constraint.distance_min = 1.5
 
     #constraint.along_min = -4  # maximum lateral force [m/s^2]
     #constraint.along_max = 4  # maximum lateral force [m/s^2]
 
     # Define initial conditions
     starting_angle = 0.00
-    x1 = 1.0
-    y1 = -1.0
-    x2 = 1.0
-    y2 = 3.8
-    ak = np.arctan2(y2-y1, x2-x1)
+    ak = 0.0
     ye = 0.0
     nedx = 0
     nedy = 0
-    model.x0 = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, x1, y1, ak, nedx, nedy, 0.00, 0.00])
+    model.x0 = np.array([starting_angle, np.sin(starting_angle), np.cos(starting_angle), 0.001, 0.00, 0.00, ye, ak, nedx, nedy, 0.00, 0.00])
 
     # define constraints struct
     #constraint.alat = Function("a_lat", [x, u], [a_lat])
     #constraint.pathlength = pathlength
     #constraint.expr = vertcat(u,v,r,Tport,Tstbd)
-    constraint.expr = vertcat(distance1,distance2,distance3,distance4)
+    constraint.expr = vertcat(distance1,distance2,distance3,distance4,distance5,distance6,distance7,distance8)
 
     # Define model struct
     params = types.SimpleNamespace()
