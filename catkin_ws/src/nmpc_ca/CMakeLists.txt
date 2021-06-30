@@ -197,6 +197,15 @@ target_link_libraries(nmpc_pf_ca
 	${catkin_LIBRARIES}
 )
 
+# NMPC trajectory planning node
+add_executable(nmpc_traj_plan src/nmpc_traj_plan.cpp)
+target_link_libraries(nmpc_traj_plan
+	${full_model_pf_ca}/libacados_ocp_solver_usv_model_pf_ca.so
+	#${acados_lib}/libacados.a
+	${acados_lib}/libacados.so
+	${catkin_LIBRARIES}
+)
+
 
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencfg)
 #add_dependencies(acados_mpc ${PROJECT_NAME}_gencpp)
