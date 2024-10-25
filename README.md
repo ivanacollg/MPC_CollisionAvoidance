@@ -43,6 +43,9 @@ Add the path to the compiled shared libraries libacados.so, libblasfeo.so, libhp
 ```
 Tipp: you can add this line to your .bashrc/.zshrc.
 
+Run acados example:
+<acados_root>/examples/acados_python/getting_started/minimal_example_ocp.py
+
 # Please cite 
 ```
 @article{COLLADOGONZALEZ2024118998,
@@ -69,7 +72,4 @@ url = {https://www.sciencedirect.com/science/article/pii/S0029801822021837},
 author = {Alejandro Gonzalez-Garcia and Ivana Collado-Gonzalez and Rodolfo Cuan-Urquizo and Carlos Sotelo and David Sotelo and Herman Castañeda},
 }
 ```
-
-Run acados example:
-<acados_root>/examples/acados_python/getting_started/minimal_example_ocp.py
 Answere yes when asked to set up Tera Render automatically
