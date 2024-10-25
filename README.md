@@ -43,6 +43,33 @@ Add the path to the compiled shared libraries libacados.so, libblasfeo.so, libhp
 ```
 Tipp: you can add this line to your .bashrc/.zshrc.
 
+# Please cite 
+```
+@article{COLLADOGONZALEZ2024118998,
+title = {Adaptive sliding mode control with nonlinear MPC-based obstacle avoidance using LiDAR for an autonomous surface vehicle under disturbances},
+journal = {Ocean Engineering},
+volume = {311},
+pages = {118998},
+year = {2024},
+issn = {0029-8018},
+doi = {https://doi.org/10.1016/j.oceaneng.2024.118998},
+url = {https://www.sciencedirect.com/science/article/pii/S0029801824023369},
+author = {Ivana Collado-Gonzalez and Alejandro Gonzalez-Garcia and Rodolfo Cuan-Urquizo and Carlos Sotelo and David Sotelo and Herman Castañeda}
+}
+
+@article{GONZALEZGARCIA2022112900,
+title = {Path-following and LiDAR-based obstacle avoidance via NMPC for an autonomous surface vehicle},
+journal = {Ocean Engineering},
+volume = {266},
+pages = {112900},
+year = {2022},
+issn = {0029-8018},
+doi = {https://doi.org/10.1016/j.oceaneng.2022.112900},
+url = {https://www.sciencedirect.com/science/article/pii/S0029801822021837},
+author = {Alejandro Gonzalez-Garcia and Ivana Collado-Gonzalez and Rodolfo Cuan-Urquizo and Carlos Sotelo and David Sotelo and Herman Castañeda},
+}
+```
+
 Run acados example:
 <acados_root>/examples/acados_python/getting_started/minimal_example_ocp.py
 Answere yes when asked to set up Tera Render automatically
